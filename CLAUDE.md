@@ -52,8 +52,8 @@ Si se cambia algo de `%USERPROFILE%\.claude\CLAUDE.md`, copiarlo también a `.cl
 ## Estado y pendientes (actualizar al terminar cada sesión)
 
 Al 04/11/2026:
-- Sheet instalado con las 7 pestañas. Apps Script publicado como versión 5 (URL /exec en `.claude/implementacion.txt`).
-- **Fórmulas:** la versión 5 las escribe traducidas al castellano. Falta que Luciana ejecute **Escandallo → Reparar fórmulas** y comprobar que no quedan `#ERROR!`. Para comprobarlo, descargar el Sheet como xlsx con el conector de Google Drive y contar las celdas con `#`.
+- Sheet instalado con las 7 pestañas. Apps Script publicado como versión 6 (URL /exec en `.claude/implementacion.txt`).
+- **Fórmulas: RESUELTO y comprobado.** No queda ningún error en el Sheet. Para revisarlo otra vez, descargar el Sheet como xlsx con el conector de Google Drive y buscar celdas con `#`.
 - **App en GitHub Pages (decidido: repo público).** Luciana no quiere la app en script.google.com, sino en https://buenasysantasmadrid.github.io/escandallo. Plan:
   - Página estática en `docs/index.html` (adaptada de Index.html). GitHub Pages sirve la rama main, carpeta `/docs`. Revisar que `.claspignore` no la suba a Google.
   - Inicio de sesión con Google Identity Services (botón "Entrar con Google", `accounts.google.com/gsi/client`). Da un ID token (JWT) que dura 1 hora.
