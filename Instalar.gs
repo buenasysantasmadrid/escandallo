@@ -13,13 +13,18 @@ var COLOR_TEXTO_ENTRADA_ = '#0000FF';
 
 function instalarEscandallo() {
   var ss = libro_();
+  var D = DATOS_INICIALES_;
+  // Instalado de verdad = PLATOS con datos y todas las pestañas creadas.
+  // Si una instalación anterior se cortó a medias, se rehace entera.
   var platos = ss.getSheetByName('PLATOS');
-  if (platos && platos.getLastRow() > 1 && String(platos.getRange('A2').getValue()) !== '') {
+  var completas = D.hojas.every(function (h) { return ss.getSheetByName(h.nombre); });
+  if (completas && platos.getLastRow() > 1 && String(platos.getRange('A2').getValue()) !== '') {
     var msg = 'El escandallo ya está instalado (PLATOS tiene datos). No se ha tocado nada.';
     try { SpreadsheetApp.getUi().alert(msg); } catch (e) {}
     return msg;
   }
-  var D = DATOS_INICIALES_;
+  // Crear antes todas las pestañas: los desplegables y fórmulas de unas apuntan a otras.
+  D.hojas.forEach(function (h) { if (!ss.getSheetByName(h.nombre)) ss.insertSheet(h.nombre); });
   instalarLeeme_(ss, D.leeme);
   D.hojas.forEach(function (h) { instalarHoja_(ss, h); });
 
