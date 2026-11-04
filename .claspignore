@@ -1,0 +1,5 @@
+# Solo se suben a Apps Script los .gs, Index.html y appsscript.json
+**/**
+!*.gs
+!Index.html
+!appsscript.json

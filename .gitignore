@@ -1,0 +1,9 @@
+# Datos con costes: solo en Google, nunca en GitHub
+DatosIniciales.gs
+*.xlsx
+*.xls
+recetas.json
+.claude/errores-ultima-revision.txt
+node_modules/
+__pycache__/
+*.zip
