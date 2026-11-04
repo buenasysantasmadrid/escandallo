@@ -25,8 +25,10 @@ function instalarEscandallo() {
   }
   // Crear antes todas las pestañas: los desplegables y fórmulas de unas apuntan a otras.
   D.hojas.forEach(function (h) { if (!ss.getSheetByName(h.nombre)) ss.insertSheet(h.nombre); });
+  ss.setSpreadsheetLocale('es_ES'); // antes de escribir: las fórmulas se traducen a este idioma
+  SpreadsheetApp.flush();
   instalarLeeme_(ss, D.leeme);
-  enIngles_(ss, function () { D.hojas.forEach(function (h) { instalarHoja_(ss, h); }); });
+  D.hojas.forEach(function (h) { instalarHoja_(ss, h); });
 
   var cf = ss.getSheetByName('CONFIG');
   Object.keys(D.config_formatos).forEach(function (a1) { cf.getRange(a1).setNumberFormat(D.config_formatos[a1]); });
@@ -130,17 +132,30 @@ function instalarHoja_(ss, h) {
 // ----------------------------------------------------------------------------
 function esFormula_(v) { return typeof v === 'string' && v.charAt(0) === '='; }
 
-function enIngles_(ss, fn) {
-  var antes = ss.getSpreadsheetLocale();
-  ss.setSpreadsheetLocale('en_US');
-  SpreadsheetApp.flush();
-  try { fn(); SpreadsheetApp.flush(); }
-  finally { ss.setSpreadsheetLocale(antes === 'en_US' ? 'es_ES' : antes); SpreadsheetApp.flush(); }
+// Nombres en castellano de las funciones que usamos (Google Sheets en español).
+var FUNCIONES_ES_ = {
+  IF: 'SI', IFERROR: 'SI.ERROR', SUMIFS: 'SUMAR.SI.CONJUNTO', COUNTIFS: 'CONTAR.SI.CONJUNTO',
+  INDEX: 'INDICE', MATCH: 'COINCIDIR', OR: 'O', AND: 'Y', ISNUMBER: 'ESNUMERO',
+  YEAR: 'AÑO', MONTH: 'MES', DATE: 'FECHA', TODAY: 'HOY', N: 'N'
+};
+
+/** Pasa una fórmula escrita en inglés (IF, comas) al idioma del Sheet: en español,
+ *  nombres en castellano, ";" entre argumentos y coma decimal. No toca el texto entre comillas. */
+function formulaLocal_(f, ss) {
+  var loc = String((ss || libro_()).getSpreadsheetLocale() || '');
+  if (!/^es/i.test(loc)) return f;
+  return f.split('"').map(function (t, i) {
+    if (i % 2) return t; // dentro de comillas
+    return t.replace(/\b([A-Z][A-Z.]*)\(/g, function (m, n) { return (FUNCIONES_ES_[n] || n) + '('; })
+      .replace(/,/g, ';')
+      .replace(/(\d)\.(\d)/g, '$1,$2');
+  }).join('"');
 }
 
 function reglasColores_(sh, h, ultima) {
+  var ss = sh.getParent();
   var reglas = h.condicionales.map(function (k) {
-    var b = SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied(k.formula)
+    var b = SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied(formulaLocal_(k.formula, ss))
       .setRanges([sh.getRange(2, k.col, ultima - 1, 1)]);
     if (k.fondo) b = b.setBackground(k.fondo);
     if (k.texto) b = b.setFontColor(k.texto).setBold(true);
@@ -152,9 +167,11 @@ function reglasColores_(sh, h, ultima) {
 /** Escribe las fórmulas de una hoja. Si soloRotas, las celdas de datos con fórmula
  *  (p. ej. CONFIG B4) solo se reescriben si ahora mismo tienen fórmula, no si alguien puso un valor. */
 function escribirFormulas_(sh, h, ultima, soloRotas) {
+  var ss = sh.getParent();
   Object.keys(h.formulas).forEach(function (c) {
+    var base = formulaLocal_(h.formulas[c], ss);
     var col = [];
-    for (var r = 2; r <= ultima; r++) col.push([h.formulas[c].replace(/\{r\}/g, r)]);
+    for (var r = 2; r <= ultima; r++) col.push([base.replace(/\{r\}/g, r)]);
     sh.getRange(2, Number(c), col.length, 1).setFormulas(col);
   });
   h.datos.forEach(function (fila, i) {
@@ -162,7 +179,7 @@ function escribirFormulas_(sh, h, ultima, soloRotas) {
       if (!esFormula_(v) || h.formulas[String(j + 1)]) return;
       var celda = sh.getRange(i + 2, j + 1);
       if (soloRotas && celda.getFormula() === '' && celda.getValue() !== '') return;
-      celda.setFormula(v);
+      celda.setFormula(formulaLocal_(v, ss));
     });
   });
 }
@@ -170,18 +187,20 @@ function escribirFormulas_(sh, h, ultima, soloRotas) {
 /** Menú: Escandallo → Reparar fórmulas. Reescribe solo las fórmulas; no toca los datos. */
 function repararFormulas() {
   var ss = libro_();
-  var hechas = [];
-  enIngles_(ss, function () {
-    DATOS_INICIALES_.hojas.forEach(function (h) {
-      var sh = ss.getSheetByName(h.nombre);
-      if (!sh) return;
+  var hechas = [], fallos = [];
+  DATOS_INICIALES_.hojas.forEach(function (h) {
+    var sh = ss.getSheetByName(h.nombre);
+    if (!sh) { fallos.push(h.nombre + ': no existe la pestaña'); return; }
+    try {
       var ultima = Math.max(h.ultima, h.datos.length + 1);
       escribirFormulas_(sh, h, ultima, true);
       reglasColores_(sh, h, ultima);
       hechas.push(h.nombre);
-    });
+    } catch (e) { fallos.push(h.nombre + ': ' + (e.message || e)); }
   });
-  var ok = 'Fórmulas reparadas en: ' + hechas.join(', ') + '.';
+  SpreadsheetApp.flush();
+  var ok = 'Fórmulas reparadas en: ' + hechas.join(', ') + '.' +
+    (fallos.length ? '\n\nNO se pudieron reparar:\n' + fallos.join('\n') : '');
   try { SpreadsheetApp.getUi().alert(ok); } catch (e) {}
   return ok;
 }

@@ -179,7 +179,7 @@ function cambiarMes_(fecha) {
 
 /** Volver a "mes en curso" automáticamente. */
 function mesActual() {
-  enIngles_(libro_(), function () { hoja_(HOJA.CONFIG).getRange('B4').setFormula('=DATE(YEAR(TODAY()),MONTH(TODAY()),1)'); });
+  hoja_(HOJA.CONFIG).getRange('B4').setFormula(formulaLocal_('=DATE(YEAR(TODAY()),MONTH(TODAY()),1)'));
 }
 
 /** Menú en el propio Google Sheet. */
