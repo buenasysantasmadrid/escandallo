@@ -188,5 +188,6 @@ function onOpen() {
     .addItem('Volver al mes en curso', 'mesActual')
     .addSeparator()
     .addItem('Instalar (solo la primera vez)', 'instalarEscandallo')
+    .addItem('Reparar fórmulas', 'repararFormulas')
     .addToUi();
 }

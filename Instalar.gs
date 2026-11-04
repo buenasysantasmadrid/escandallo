@@ -81,19 +81,20 @@ function instalarHoja_(ss, h) {
   sh.setRowHeight(1, 42);
   h.anchos.forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
 
-  // datos + fórmulas (una sola escritura)
+  // datos (sin fórmulas) y después las fórmulas con setFormulas
   var filas = [];
   for (var r = 2; r <= ultima; r++) {
     var dato = h.datos[r - 2] || [];
     var fila = [];
     for (var c = 1; c <= nc; c++) {
-      var f = h.formulas[String(c)];
-      if (f) fila.push(f.replace(/\{r\}/g, r));
-      else { var v = dato[c - 1]; fila.push(v === null || v === undefined ? '' : v); }
+      var v = dato[c - 1];
+      if (h.formulas[String(c)] || esFormula_(v)) fila.push('');
+      else fila.push(v === null || v === undefined ? '' : v);
     }
     filas.push(fila);
   }
   if (filas.length) sh.getRange(2, 1, filas.length, nc).setValues(filas);
+  escribirFormulas_(sh, h, ultima, false);
 
   var cuerpo = function (c) { return sh.getRange(2, c, ultima - 1, 1); };
   sh.getRange(1, 1, ultima, nc).setFontFamily('Arial');
@@ -120,4 +121,45 @@ function instalarHoja_(ss, h) {
   if (h.nombre !== 'CONFIG') sh.getRange(1, 1, ultima, nc).createFilter();
   // columnas sobrantes fuera
   if (sh.getMaxColumns() > nc) sh.deleteColumns(nc + 1, sh.getMaxColumns() - nc);
+}
+
+// ----------------------------------------------------------------------------
+// FÓRMULAS: siempre con setFormula/setFormulas y en inglés con comas (IF, SUMIFS…).
+// Así funcionan sea cual sea el idioma del Sheet (aquí es español: SI, SUMAR.SI.CONJUNTO, ";").
+// NO escribir fórmulas con setValues: Google las lee en el idioma del Sheet y dan #ERROR!.
+// ----------------------------------------------------------------------------
+function esFormula_(v) { return typeof v === 'string' && v.charAt(0) === '='; }
+
+/** Escribe las fórmulas de una hoja. Si soloRotas, las celdas de datos con fórmula
+ *  (p. ej. CONFIG B4) solo se reescriben si ahora mismo tienen fórmula, no si alguien puso un valor. */
+function escribirFormulas_(sh, h, ultima, soloRotas) {
+  Object.keys(h.formulas).forEach(function (c) {
+    var col = [];
+    for (var r = 2; r <= ultima; r++) col.push([h.formulas[c].replace(/\{r\}/g, r)]);
+    sh.getRange(2, Number(c), col.length, 1).setFormulas(col);
+  });
+  h.datos.forEach(function (fila, i) {
+    fila.forEach(function (v, j) {
+      if (!esFormula_(v) || h.formulas[String(j + 1)]) return;
+      var celda = sh.getRange(i + 2, j + 1);
+      if (soloRotas && celda.getFormula() === '' && celda.getValue() !== '') return;
+      celda.setFormula(v);
+    });
+  });
+}
+
+/** Menú: Escandallo → Reparar fórmulas. Reescribe solo las fórmulas; no toca los datos. */
+function repararFormulas() {
+  var ss = libro_();
+  var hechas = [];
+  DATOS_INICIALES_.hojas.forEach(function (h) {
+    var sh = ss.getSheetByName(h.nombre);
+    if (!sh) return;
+    escribirFormulas_(sh, h, Math.max(h.ultima, h.datos.length + 1), true);
+    hechas.push(h.nombre);
+  });
+  SpreadsheetApp.flush();
+  var ok = 'Fórmulas reparadas en: ' + hechas.join(', ') + '.';
+  try { SpreadsheetApp.getUi().alert(ok); } catch (e) {}
+  return ok;
 }
