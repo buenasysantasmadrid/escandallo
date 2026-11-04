@@ -35,6 +35,37 @@ Ejecutar en PowerShell, en esta carpeta (Desktop\ESCANDALLO):
    - Guarda el ID de la implementación en `.claude\implementacion.txt` e imprime la URL /exec, que hay que darle a Luciana.
 6. Commit y push de `.clasp.json` y `.claude\implementacion.txt`.
 
+## Otro ordenador (la carpeta no existe todavía)
+
+El proyecto ya está creado: NO repetir "Primera vez". En PowerShell:
+
+1. Instalar si faltan: Git, Node.js y clasp (`npm install -g @google/clasp`).
+2. `cd $HOME\Desktop` y `git clone https://github.com/buenasysantasmadrid/escandallo.git ESCANDALLO`. Entrar en la carpeta.
+3. `git config user.email "buenasysantasmadrid@gmail.com"` y `git config user.name "Buenas y Santas"`.
+4. `clasp login` con lfisbein@gmail.com (es quien creó el Apps Script).
+5. Instrucciones generales de Luciana (fórmulas en castellano, etc.): copiar `.claude\CLAUDE-general.md` a `%USERPROFILE%\.claude\CLAUDE.md`. Si ese archivo ya existe, añadir el contenido sin borrar lo que haya.
+6. Reiniciar Claude Code en la carpeta. `.claude/inicio-sesion.ps1` trae de Google `DatosIniciales.gs`, que no está en GitHub.
+7. Comprobar `clasp show-authorized-user` y que el aviso de inicio diga "Google coincide con los archivos locales".
+
+Si se cambia algo de `%USERPROFILE%\.claude\CLAUDE.md`, copiarlo también a `.claude\CLAUDE-general.md` y hacer commit.
+
+## Estado y pendientes (actualizar al terminar cada sesión)
+
+Al 04/11/2026:
+- Sheet instalado con las 7 pestañas. Apps Script publicado como versión 5 (URL /exec en `.claude/implementacion.txt`).
+- **Fórmulas:** la versión 5 las escribe traducidas al castellano. Falta que Luciana ejecute **Escandallo → Reparar fórmulas** y comprobar que no quedan `#ERROR!`. Para comprobarlo, descargar el Sheet como xlsx con el conector de Google Drive y contar las celdas con `#`.
+- **App en GitHub Pages (decidido: repo público).** Luciana no quiere la app en script.google.com, sino en https://buenasysantasmadrid.github.io/escandallo. Plan:
+  - Página estática en `docs/index.html` (adaptada de Index.html). GitHub Pages sirve la rama main, carpeta `/docs`. Revisar que `.claspignore` no la suba a Google.
+  - Inicio de sesión con Google Identity Services (botón "Entrar con Google", `accounts.google.com/gsi/client`). Da un ID token (JWT) que dura 1 hora.
+  - La página llama al Apps Script con `fetch(URL_exec, {method:'POST', body: JSON.stringify({token, action, ...})})`, sin cabecera Content-Type (text/plain) para que no haya preflight de CORS.
+  - Code.gs: añadir `doPost(e)`, que comprueba el token con `UrlFetchApp` en `https://oauth2.googleapis.com/tokeninfo?id_token=...` (`aud` = CLIENT_ID, `email_verified`, email en USUARIOS_PERMITIDOS) y llama a la lógica de `api()` con ese email. Devuelve JSON con ContentService.
+  - appsscript.json: `executeAs: USER_DEPLOYING`, `access: ANYONE_ANONYMOUS` y añadir el scope `https://www.googleapis.com/auth/script.external_request`. `doGet` pasa a mostrar solo un enlace a la página de GitHub.
+  - **Lo tiene que hacer Luciana en el navegador** (guiarla paso a paso):
+    - (a) GitHub → repo → Settings → General → Change visibility → Public.
+    - (b) Settings → Pages → Deploy from a branch → main, carpeta /docs.
+    - (c) Google Cloud Console (buenasysantasmadrid): crear el proyecto "Escandallo", pantalla de consentimiento OAuth (External, solo email/perfil, publicar en producción) y Credentials → OAuth client ID → Web application → Authorized JavaScript origins `https://buenasysantasmadrid.github.io`. Darle a Claude el Client ID, que no es secreto.
+  - Revisado antes de hacerlo público: el historial de git no tiene costes (DatosIniciales.gs, el Excel y el .zip no se suben).
+
 ## Día a día
 
 - Al abrir sesión, `.claude/inicio-sesion.ps1` hace git pull y compara Google con los archivos locales.

@@ -13,7 +13,6 @@ if (Test-Path '.git') {
   else { $avisos += "git: bajados cambios. $pull" }
 } else { $avisos += 'Esta carpeta todavía no está enlazada con GitHub (ver CLAUDE.md, "Primera vez").' }
 
-if (-not (Test-Path 'DatosIniciales.gs')) { $avisos += 'Falta DatosIniciales.gs (no va a GitHub). Solo hace falta para instalar o reinstalar.' }
 
 if (-not (Get-Command clasp -ErrorAction SilentlyContinue)) {
   $avisos += 'clasp no está instalado en este ordenador.'
@@ -31,13 +30,22 @@ if (-not (Get-Command clasp -ErrorAction SilentlyContinue)) {
     $distintos = @()
     foreach ($r in $remotos) {
       $local = if ($r.Extension -eq '.js') { Join-Path $raiz ($r.BaseName + '.gs') } else { Join-Path $raiz $r.Name }
-      if (-not (Test-Path $local)) { $distintos += "$($r.BaseName) (solo está en Google)" }
+      if (-not (Test-Path $local) -and $r.BaseName -eq 'DatosIniciales') {
+        # No va a GitHub (tiene costes): en un ordenador nuevo se recupera de Google.
+        Copy-Item $r.FullName $local
+        $avisos += 'DatosIniciales.gs recuperado de Google (no está en GitHub).'
+      }
+      elseif (-not (Test-Path $local)) { $distintos += "$($r.BaseName) (solo está en Google)" }
       elseif ((& $norm $r.FullName) -ne (& $norm $local)) { $distintos += "$($r.BaseName) (distinto)" }
     }
     if ($distintos.Count -eq 0) { $avisos += 'Apps Script: Google coincide con los archivos locales.' }
     else { $avisos += 'Apps Script DIFIERE de Google: ' + ($distintos -join ', ') + ". Copia de Google en: $tmp" }
   }
 }
+
+if (-not (Test-Path 'DatosIniciales.gs')) { $avisos += 'Falta DatosIniciales.gs (no va a GitHub) y no se pudo traer de Google. Sin él, publicar.ps1 no deja subir nada (Google lo borraría).' }
+$general = Join-Path $env:USERPROFILE '.claude\CLAUDE.md'
+if (-not (Test-Path $general)) { $avisos += 'Este ordenador no tiene las instrucciones generales de Luciana: copiar .claude\CLAUDE-general.md a ' + $general + '.' }
 
 $texto = $avisos -join "`n"
 @{ systemMessage = $texto; hookSpecificOutput = @{ hookEventName = 'SessionStart'; additionalContext = $texto } } | ConvertTo-Json -Compress
