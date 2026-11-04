@@ -81,7 +81,7 @@ Al 04/11/2026:
 - EQUIVALENCIAS: A producto factura (texto exacto), B proveedor, C ingrediente, D factor
 - CONFIG: B2 coeficiente (3,5), B3 IVA (10 %), B4 fecha del mes de cálculo, B5 clave aaaamm, B6 alerta de food cost
 
-**Fórmulas:** el Sheet está en español y Google lee en español incluso lo que se escribe con `setFormula`. Desde código, pasar siempre la fórmula por `formulaLocal_(f)` (Instalar.gs) antes de `setFormula`. Traduce al castellano con `;`. Si se usa una función nueva, añadirla a `FUNCIONES_ES_`. Para dárselas a Luciana a mano, en castellano y con `;` (SI, SUMAR.SI.CONJUNTO…). Si el Sheet ya instalado tiene fórmulas rotas, usar el menú **Escandallo → Reparar fórmulas**.
+**Fórmulas:** el Sheet está en español y Google lee en español incluso lo que se escribe con `setFormula`. Desde código, pasar siempre la fórmula por `formulaLocal_(f)` (Instalar.gs) antes de `setFormula`. Deja los nombres en inglés y cambia `,` por `;` (comprobado en este Sheet: las comas dan #ERROR! y los nombres en castellano dan #NAME?). Para dárselas a Luciana a mano, en castellano y con `;` (SI, SUMAR.SI.CONJUNTO…). Si el Sheet ya instalado tiene fórmulas rotas, usar el menú **Escandallo → Reparar fórmulas**.
 
 Las fórmulas están pre-rellenadas hasta abajo (PLATOS 300, RECETAS 2000, INGREDIENTES 600, FACTURAS 3000 filas). Para leer filas con datos, filtrar por la columna A (la D en FACTURAS); no usar getLastRow.
 

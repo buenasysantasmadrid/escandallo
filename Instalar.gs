@@ -132,23 +132,16 @@ function instalarHoja_(ss, h) {
 // ----------------------------------------------------------------------------
 function esFormula_(v) { return typeof v === 'string' && v.charAt(0) === '='; }
 
-// Nombres en castellano de las funciones que usamos (Google Sheets en español).
-var FUNCIONES_ES_ = {
-  IF: 'SI', IFERROR: 'SI.ERROR', SUMIFS: 'SUMAR.SI.CONJUNTO', COUNTIFS: 'CONTAR.SI.CONJUNTO',
-  INDEX: 'INDICE', MATCH: 'COINCIDIR', OR: 'O', AND: 'Y', ISNUMBER: 'ESNUMERO',
-  YEAR: 'AÑO', MONTH: 'MES', DATE: 'FECHA', TODAY: 'HOY', N: 'N'
-};
-
-/** Pasa una fórmula escrita en inglés (IF, comas) al idioma del Sheet: en español,
- *  nombres en castellano, ";" entre argumentos y coma decimal. No toca el texto entre comillas. */
+/** Adapta una fórmula escrita en inglés con comas para escribirla con setFormula en un Sheet en español.
+ *  Comprobado en este Sheet: setFormula quiere los NOMBRES EN INGLÉS (IF, SUMIFS…) pero los
+ *  SEPARADORES DEL IDIOMA del Sheet (";" y coma decimal). Con comas da #ERROR! y con SI/SUMAR.SI… da #NAME?.
+ *  Google luego las muestra en castellano. No toca el texto entre comillas. */
 function formulaLocal_(f, ss) {
   var loc = String((ss || libro_()).getSpreadsheetLocale() || '');
-  if (!/^es/i.test(loc)) return f;
+  if (/^(en|ja|zh|ko|th|he)/i.test(loc) || /_(US|GB|AU|CA|IN|IE|NZ|MX)$/i.test(loc)) return f; // idiomas con coma
   return f.split('"').map(function (t, i) {
     if (i % 2) return t; // dentro de comillas
-    return t.replace(/\b([A-Z][A-Z.]*)\(/g, function (m, n) { return (FUNCIONES_ES_[n] || n) + '('; })
-      .replace(/,/g, ';')
-      .replace(/(\d)\.(\d)/g, '$1,$2');
+    return t.replace(/,/g, ';').replace(/(\d)\.(\d)/g, '$1,$2');
   }).join('"');
 }
 
