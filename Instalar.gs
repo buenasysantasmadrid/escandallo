@@ -26,7 +26,7 @@ function instalarEscandallo() {
   // Crear antes todas las pestañas: los desplegables y fórmulas de unas apuntan a otras.
   D.hojas.forEach(function (h) { if (!ss.getSheetByName(h.nombre)) ss.insertSheet(h.nombre); });
   instalarLeeme_(ss, D.leeme);
-  D.hojas.forEach(function (h) { instalarHoja_(ss, h); });
+  enIngles_(ss, function () { D.hojas.forEach(function (h) { instalarHoja_(ss, h); }); });
 
   var cf = ss.getSheetByName('CONFIG');
   Object.keys(D.config_formatos).forEach(function (a1) { cf.getRange(a1).setNumberFormat(D.config_formatos[a1]); });
@@ -112,13 +112,7 @@ function instalarHoja_(ss, h) {
     cuerpo(v.col).setDataValidation(b.build());
   });
 
-  var reglas = h.condicionales.map(function (k) {
-    var b = SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied(k.formula).setRanges([cuerpo(k.col)]);
-    if (k.fondo) b = b.setBackground(k.fondo);
-    if (k.texto) b = b.setFontColor(k.texto).setBold(true);
-    return b.build();
-  });
-  if (reglas.length) sh.setConditionalFormatRules(reglas);
+  reglasColores_(sh, h, ultima);
 
   Object.keys(h.notas).forEach(function (a1) { sh.getRange(a1).setNote(h.notas[a1]); });
   sh.setFrozenRows(1);
@@ -129,11 +123,31 @@ function instalarHoja_(ss, h) {
 }
 
 // ----------------------------------------------------------------------------
-// FÓRMULAS: siempre con setFormula/setFormulas y en inglés con comas (IF, SUMIFS…).
-// Así funcionan sea cual sea el idioma del Sheet (aquí es español: SI, SUMAR.SI.CONJUNTO, ";").
-// NO escribir fórmulas con setValues: Google las lee en el idioma del Sheet y dan #ERROR!.
+// FÓRMULAS: el Sheet está en español y Google lee las fórmulas en el idioma del Sheet
+// (SI, SUMAR.SI.CONJUNTO, ";"), también con setFormula. Las nuestras están en inglés con
+// comas, así que se escriben con el Sheet en inglés un momento (enIngles_) y luego se
+// vuelve a español: Google traduce solo las fórmulas ya guardadas.
 // ----------------------------------------------------------------------------
 function esFormula_(v) { return typeof v === 'string' && v.charAt(0) === '='; }
+
+function enIngles_(ss, fn) {
+  var antes = ss.getSpreadsheetLocale();
+  ss.setSpreadsheetLocale('en_US');
+  SpreadsheetApp.flush();
+  try { fn(); SpreadsheetApp.flush(); }
+  finally { ss.setSpreadsheetLocale(antes === 'en_US' ? 'es_ES' : antes); SpreadsheetApp.flush(); }
+}
+
+function reglasColores_(sh, h, ultima) {
+  var reglas = h.condicionales.map(function (k) {
+    var b = SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied(k.formula)
+      .setRanges([sh.getRange(2, k.col, ultima - 1, 1)]);
+    if (k.fondo) b = b.setBackground(k.fondo);
+    if (k.texto) b = b.setFontColor(k.texto).setBold(true);
+    return b.build();
+  });
+  sh.setConditionalFormatRules(reglas);
+}
 
 /** Escribe las fórmulas de una hoja. Si soloRotas, las celdas de datos con fórmula
  *  (p. ej. CONFIG B4) solo se reescriben si ahora mismo tienen fórmula, no si alguien puso un valor. */
@@ -157,13 +171,16 @@ function escribirFormulas_(sh, h, ultima, soloRotas) {
 function repararFormulas() {
   var ss = libro_();
   var hechas = [];
-  DATOS_INICIALES_.hojas.forEach(function (h) {
-    var sh = ss.getSheetByName(h.nombre);
-    if (!sh) return;
-    escribirFormulas_(sh, h, Math.max(h.ultima, h.datos.length + 1), true);
-    hechas.push(h.nombre);
+  enIngles_(ss, function () {
+    DATOS_INICIALES_.hojas.forEach(function (h) {
+      var sh = ss.getSheetByName(h.nombre);
+      if (!sh) return;
+      var ultima = Math.max(h.ultima, h.datos.length + 1);
+      escribirFormulas_(sh, h, ultima, true);
+      reglasColores_(sh, h, ultima);
+      hechas.push(h.nombre);
+    });
   });
-  SpreadsheetApp.flush();
   var ok = 'Fórmulas reparadas en: ' + hechas.join(', ') + '.';
   try { SpreadsheetApp.getUi().alert(ok); } catch (e) {}
   return ok;

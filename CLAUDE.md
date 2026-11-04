@@ -50,7 +50,7 @@ Ejecutar en PowerShell, en esta carpeta (Desktop\ESCANDALLO):
 - EQUIVALENCIAS: A producto factura (texto exacto), B proveedor, C ingrediente, D factor
 - CONFIG: B2 coeficiente (3,5), B3 IVA (10 %), B4 fecha del mes de cálculo, B5 clave aaaamm, B6 alerta de food cost
 
-**Fórmulas:** el Sheet está en español. Desde código, escribirlas solo con `setFormula`/`setFormulas` (en inglés y con comas), nunca con `setValues`, porque dan #ERROR!. Para dárselas a Luciana a mano, en castellano y con `;` (SI, SUMAR.SI.CONJUNTO…). Si el Sheet ya instalado tiene fórmulas rotas, usar el menú **Escandallo → Reparar fórmulas**.
+**Fórmulas:** el Sheet está en español y Google lee en español incluso lo que se escribe con `setFormula`. Desde código, escribir siempre dentro de `enIngles_(ss, fn)` (Instalar.gs), que pasa el Sheet a inglés, escribe en inglés con comas y lo devuelve a español. Para dárselas a Luciana a mano, en castellano y con `;` (SI, SUMAR.SI.CONJUNTO…). Si el Sheet ya instalado tiene fórmulas rotas, usar el menú **Escandallo → Reparar fórmulas**.
 
 Las fórmulas están pre-rellenadas hasta abajo (PLATOS 300, RECETAS 2000, INGREDIENTES 600, FACTURAS 3000 filas). Para leer filas con datos, filtrar por la columna A (la D en FACTURAS); no usar getLastRow.
 
