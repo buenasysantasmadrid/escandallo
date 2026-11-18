@@ -132,6 +132,7 @@ function pintar() {
 
 function claseFc(p) {
   if (p.tipo === 'Elaboración') return ['p-gris', 'Elaboración'];
+  if (p.aviso === 'Falta receta') return ['p-gris', 'Falta receta'];
   if (p.aviso === 'PVP por debajo del mínimo') return ['p-mal', pct(p.fc)];
   if (p.aviso === 'Food cost alto') return ['p-warn', pct(p.fc)];
   if (p.fc == null) return ['p-gris', 'Sin PVP'];
