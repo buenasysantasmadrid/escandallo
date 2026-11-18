@@ -51,6 +51,9 @@ tr.tviejo td:first-child{border-left:3px solid var(--mal)}
 .rlin input{width:100%;padding:8px;border:1px solid var(--linea);border-radius:8px;font:inherit;background:#fff}
 .rlin small{grid-column:1/-1;color:var(--gris);font-size:12px}
 .quitar{background:#f3efe6;border:0;border-radius:8px;height:36px;cursor:pointer;color:var(--mal);font-size:16px}
+.quitar.mini{height:28px;width:28px;font-size:13px;padding:0}
+.candado{background:#f3efe6;border:0;border-radius:8px;width:36px;height:36px;font-size:17px;cursor:pointer;margin-left:6px;flex:none}
+.candado.on{background:#dde8f6}
 .fila2{display:flex;gap:8px;margin-top:10px}
 .fila2 .btn{flex:1}
 .sub{color:var(--mal);font-weight:600} .baj{color:var(--ok);font-weight:600}
@@ -182,7 +185,7 @@ function pintar() {
 const ORIGEN = {
   'Facturas del mes': ['p-ok', 'Factura del mes'],
   'Facturas (histórico)': ['p-ok', 'Factura anterior'],
-  'Manual': ['p-azul', 'Manual'],
+  'Manual': ['p-azul', '🔒 Bloqueado'],
   'Ref. 2021': ['p-mal', 'Precio viejo 2021'],
   'Receta propia': ['p-gris', 'Receta propia'],
   'Importe fijo': ['p-gris', 'Importe fijo']
@@ -296,12 +299,21 @@ function detallePlato(p) {
       ${esPlato ? `<div class="kpi"><b>${eur(p.pvpMin)}</b><span>PVP mínimo</span></div>
       <div class="kpi"><b>${pct(p.fc)}</b><span>Food cost</span></div>` : ''}
     </div>
-    <table><thead><tr><th>Ingrediente</th><th class="n">Cant.</th><th class="n">€/ud</th><th class="n">Coste</th></tr></thead><tbody>
-    ${lin.map(r => { const ig = ingIdx[r.ing] || {}; const v = ig.variacion;
+    <table><thead><tr><th>Ingrediente</th><th class="n">Cant.</th><th class="n">€/ud</th><th class="n">Coste</th><th></th></tr></thead><tbody>
+    ${lin.map((r, k) => { const ig = ingIdx[r.ing] || {}; const v = ig.variacion;
       const vj = ig.tipo === 'Elaboración' ? viejosDe(r.ing).size > 0 : esViejo(ingIdx[r.ing]);
       return `<tr class="${vj ? 'tviejo' : ''}"><td>${esc(r.ing)}<br><small>${pillOrigen(ig)}${ig.tipo === 'Elaboración' && vj ? ' <span class="viejo">lleva precios viejos</span>' : ''}${v != null && Math.abs(v) >= 0.01 ? ` <span class="${v > 0 ? 'sub' : 'baj'}">${v > 0 ? '+' : ''}${pct(v)} vs 2021</span>` : ''}</small></td>
-      <td class="n">${String(r.cant).replace('.', ',')} ${esc(r.unidad)}</td><td class="n">${eur(r.precio, 3)}</td><td class="n">${eur(r.coste)}</td></tr>`; }).join('')}
-    </tbody><tfoot><tr><td colspan="3">Total receta</td><td class="n">${eur(total)}</td></tr></tfoot></table>
+      <td class="n">${String(r.cant).replace('.', ',')} ${esc(r.unidad)}</td><td class="n">${eur(r.precio, 3)}</td><td class="n">${eur(r.coste)}</td>
+      <td class="n"><button class="quitar mini" data-borrar="${k}" title="Quitar de la receta" aria-label="Quitar ${esc(r.ing)}">✕</button></td></tr>`; }).join('')}
+    </tbody><tfoot><tr><td colspan="3">Total receta</td><td class="n">${eur(total)}</td><td></td></tr></tfoot></table>
+    ${lin.length ? '' : '<p class="nota viejo">Este plato todavía no tiene receta: añade sus productos aquí abajo con el +.</p>'}
+    <datalist id="dlAdd">${d.ingredientes.filter(i => i.nombre !== p.nombre).map(i => `<option value="${esc(i.nombre)}">`).join('')}</datalist>
+    <div class="rlin" style="margin-top:8px;grid-template-columns:1fr 84px 44px">
+      <input list="dlAdd" id="aIng" placeholder="Añadir producto…">
+      <input id="aCant" inputmode="decimal" placeholder="Cant.">
+      <button class="btn" id="aMas" style="padding:8px" aria-label="Añadir">+</button>
+      <small id="aInfo">Escribe el producto, la cantidad y pulsa +</small>
+    </div>
     ${p.coste2021 != null ? `<p class="nota">Coste por ración en el Excel 2021: ${eur(p.coste2021, esPlato ? 2 : 3)}</p>` : ''}
     ${esPlato ? `
     <div class="edit">
@@ -311,6 +323,20 @@ function detallePlato(p) {
     <button class="btn" id="eGuardar">Guardar PVP y coeficiente</button>` : ''}
     <div class="fila2"><button class="btn sec" id="eReceta">✎ ${lin.length ? 'Modificar la receta' : 'Crear la receta'}</button></div>`);
   $('#eReceta').onclick = () => editarReceta(p);
+  const actuales = () => lin.map(r => ({ ing: r.ing, cant: String(r.cant), nota: r.nota || '' }));
+  $('#aIng').oninput = () => { const i = ingIdx[$('#aIng').value.trim()];
+    $('#aInfo').innerHTML = i ? `En ${esc(i.unidad)} · ${eur(i.usado, 3)}/${esc(i.unidad)} ${pillOrigen(i)}` : 'Escribe el producto, la cantidad y pulsa +'; };
+  $('#aMas').onclick = async () => {
+    const ing = $('#aIng').value.trim(), cant = num($('#aCant').value);
+    if (!ingIdx[ing]) { toast('Elige un producto de la lista (o créalo en Ingredientes)'); return; }
+    if (!(cant > 0)) { toast('Pon la cantidad'); return; }
+    await guardarLineas(p, [...actuales(), { ing, cant: String(cant), nota: '' }], $('#aMas'), 'Añadido');
+  };
+  document.querySelectorAll('[data-borrar]').forEach(b => b.onclick = async () => {
+    const k = Number(b.dataset.borrar);
+    if (!confirm(`¿Quitar ${lin[k].ing} de ${p.nombre}?`)) return;
+    await guardarLineas(p, actuales().filter((_, j) => j !== k), b, 'Quitado');
+  });
   if (esPlato) $('#eGuardar').onclick = async () => {
     const b = $('#eGuardar'); b.disabled = true; b.textContent = 'Guardando…';
     try {
@@ -320,6 +346,17 @@ function detallePlato(p) {
       cerrarHoja(); toast('Guardado'); cargar();
     } catch (e) { toast(e.message); b.disabled = false; b.textContent = 'Guardar cambios'; }
   };
+}
+
+// Guarda las líneas de la receta, recarga y vuelve a abrir el plato.
+async function guardarLineas(p, lineas, boton, msg) {
+  if (boton) { boton.disabled = true; boton.textContent = '…'; }
+  try {
+    await llamar({ action: 'receta', plato: p.nombre, lineas });
+    toast(msg || 'Guardado');
+    await cargar();
+    const nuevo = st.datos.platos.find(x => x.nombre === p.nombre); if (nuevo) detallePlato(nuevo);
+  } catch (e) { toast(e.message); if (boton) { boton.disabled = false; boton.textContent = boton.dataset.borrar != null ? '✕' : '+'; } }
 }
 
 // ---- Editar receta ----
@@ -383,17 +420,28 @@ function vistaIng() {
   const chip = (k, t) => `<button class="chip ${(st.filtroIng || 'todos') === k ? 'on' : ''}" data-f="${k}">${t}</button>`;
   $('#cont').innerHTML = `
     <input class="buscar" id="q" placeholder="Buscar ingrediente…" value="${esc(st.q)}">
-    <div class="chips">${chip('todos', 'Todos')}${chip('viejos', `Precio viejo (${nViejos})`)}${chip('manual', 'Manuales')}${chip('subidas', 'Subidas &gt; 10 % vs 2021')}</div>
+    <div class="chips">${chip('todos', 'Todos')}${chip('viejos', `Precio viejo (${nViejos})`)}${chip('manual', '🔒 Bloqueados')}${chip('subidas', 'Subidas &gt; 10 % vs 2021')}</div>
     <button class="btn sec" id="nuevoIng" style="margin-bottom:10px">+ Nuevo ingrediente</button>
     <div class="lista">${L.map(i => `
       <div class="fila" data-n="${esc(i.nombre)}">
         <div class="nom"><b>${esc(i.nombre)}</b><small>${pillOrigen(i)}${i.lineas ? ` · ${i.lineas} línea${i.lineas > 1 ? 's' : ''} este mes` : ''}</small></div>
         <div class="der"><b class="${i.tipo === 'Compra' && esViejo(i) ? 'viejo' : ''}">${eur(i.usado, 3)}</b><small>/ ${esc(i.unidad)}${i.variacion != null && Math.abs(i.variacion) >= 0.01 ? ` · <span class="${i.variacion > 0 ? 'sub' : 'baj'}">${i.variacion > 0 ? '+' : ''}${pct(i.variacion)}</span>` : ''}</small></div>
+        ${i.tipo === 'Compra' ? `<button class="candado ${i.manual != null ? 'on' : ''}" data-lock="${esc(i.nombre)}" title="${i.manual != null ? 'Desbloquear: volver a las facturas' : 'Bloquear este precio'}">${i.manual != null ? '🔒' : '🔓'}</button>` : ''}
       </div>`).join('') || '<div class="vacio">Nada que mostrar</div>'}</div>
-    <p class="nota">Verde: precio de las facturas (del mes o, si este mes no hubo compras, de meses anteriores). Azul: precio puesto a mano. Rojo: todavía con el precio viejo del Excel 2021. Toca un ingrediente para poner su precio a mano.</p>`;
+    <p class="nota">Verde: precio de las facturas (del mes o, si este mes no hubo compras, de meses anteriores). Rojo: todavía con el precio viejo del Excel 2021. 🔒 Azul: precio bloqueado, las facturas no lo cambian. Pulsa el candado para bloquear o desbloquear; toca el ingrediente para escribir otro precio.</p>`;
   $('#q').oninput = e => { st.q = e.target.value; const pos = e.target.selectionStart; vistaIng(); const q = $('#q'); q.focus(); q.setSelectionRange(pos, pos); };
   document.querySelectorAll('.chip').forEach(b => b.onclick = () => { st.filtroIng = b.dataset.f; vistaIng(); });
   document.querySelectorAll('.fila').forEach(f => f.onclick = () => detalleIng(d.ingredientes.find(i => i.nombre === f.dataset.n)));
+  document.querySelectorAll('[data-lock]').forEach(b => b.onclick = async ev => {
+    ev.stopPropagation();
+    const i = d.ingredientes.find(x => x.nombre === b.dataset.lock);
+    if (i.manual == null && !(i.usado > 0)) { detalleIng(i); toast('No tiene precio: escribe uno para bloquearlo'); return; }
+    b.disabled = true; b.textContent = '…';
+    try {
+      await llamar({ action: 'precioManual', ingrediente: i.nombre, valor: i.manual != null ? '' : String(i.usado) });
+      toast(i.manual != null ? 'Desbloqueado: usa las facturas' : 'Bloqueado a ' + eur(i.usado, 3)); cargar();
+    } catch (e) { toast(e.message); b.disabled = false; b.textContent = i.manual != null ? '🔒' : '🔓'; }
+  });
   $('#nuevoIng').onclick = nuevoIng;
 }
 
@@ -410,13 +458,13 @@ function detalleIng(i) {
       ${fila('Facturas de este mes', i.mes != null ? eur(i.mes, 3) + (i.lineas ? ` (${i.lineas} línea${i.lineas > 1 ? 's' : ''})` : '') : '—')}
       ${fila('Facturas de meses anteriores', eur(i.hist, 3))}
       ${fila('Excel 2021 (viejo)', eur(i.ref, 3))}
-      ${fila('Puesto a mano', i.manual != null ? eur(i.manual, 3) : '—')}
+      ${fila('🔒 Bloqueado', i.manual != null ? eur(i.manual, 3) : '—')}
     </tbody></table>
     <div class="edit">
-      <div class="campo" style="grid-column:1/-1"><label>Precio a mano, € por ${esc(i.unidad)} (vacío = usar las facturas)</label><input id="iMan" inputmode="decimal" value="${fmt(i.manual)}"></div>
+      <div class="campo" style="grid-column:1/-1"><label>Precio, € por ${esc(i.unidad)}</label><input id="iMan" inputmode="decimal" value="${fmt(i.manual != null ? i.manual : i.usado)}"></div>
     </div>
-    <div class="fila2">${i.manual != null ? '<button class="btn sec" id="iQuitar">Quitar precio manual</button>' : ''}<button class="btn" id="iGuardar">Guardar precio</button></div>
-    <p class="nota">El precio a mano manda sobre el de las facturas hasta que lo quites.</p>` : `<p class="nota">${i.tipo === 'Elaboración' ? 'Su precio sale de su propia receta (en la Carta, filtro Elaboraciones).' : 'Importe fijo por plato.'}</p>`}
+    <div class="fila2">${i.manual != null ? '<button class="btn sec" id="iQuitar">🔓 Desbloquear (usar facturas)</button>' : ''}<button class="btn" id="iGuardar">🔒 ${i.manual != null ? 'Cambiar precio bloqueado' : 'Bloquear este precio'}</button></div>
+    <p class="nota">Con el candado cerrado, el precio se queda fijo y las facturas nuevas no lo cambian. Con el candado abierto, se usa el precio de las facturas.</p>` : `<p class="nota">${i.tipo === 'Elaboración' ? 'Su precio sale de su propia receta (en la Carta, filtro Elaboraciones).' : 'Importe fijo por plato.'}</p>`}
     ${usos.length ? `<p class="nota">Se usa en: ${esc(usos.join(', '))}</p>` : '<p class="nota">No se usa en ninguna receta.</p>'}`);
   if (!compra) return;
   const enviar = async (valor, b) => {
@@ -424,7 +472,7 @@ function detalleIng(i) {
     try { await llamar({ action: 'precioManual', ingrediente: i.nombre, valor }); cerrarHoja(); toast('Precio guardado'); cargar(); }
     catch (e) { toast(e.message); b.disabled = false; b.textContent = 'Guardar precio'; }
   };
-  $('#iGuardar').onclick = () => { const v = $('#iMan').value.trim(); if (v && !(num(v) > 0)) { toast('Precio no válido'); return; } enviar(v ? String(num(v)) : '', $('#iGuardar')); };
+  $('#iGuardar').onclick = () => { const v = $('#iMan').value.trim(); if (!(num(v) > 0)) { toast('Escribe un precio'); return; } enviar(String(num(v)), $('#iGuardar')); };
   if ($('#iQuitar')) $('#iQuitar').onclick = () => enviar('', $('#iQuitar'));
 }
 
