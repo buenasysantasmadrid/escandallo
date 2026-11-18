@@ -164,6 +164,8 @@ Precio del ingrediente = media ponderada del mes (Σ importe / Σ cantidad). Si 
   - Precio manual: INGREDIENTES L manda sobre todo y su origen sale como "Manual". `asegurarPrecioManual_` pone la columna y las fórmulas la primera vez que se cargan los datos.
   - Ingredientes nuevos (acción `nuevoIng`).
   - Precios viejos (Ref. 2021 o sin precio) en rojo, contando también lo que hay dentro de las elaboraciones. Hay filtro "Precios viejos".
+  - En el detalle del plato: ✕ por línea para quitar y una fila "Añadir producto… +" (también en platos sin receta). Cada cambio guarda la receta entera.
+  - Candado 🔒 = precio manual (INGREDIENTES L). Al bloquear se fija el precio que se usa ahora; al desbloquear se borra L y vuelve a las facturas. En la app se llama "Bloqueado", no "Manual".
 - Lo que sigue es la idea original, como referencia:
 
 El proyecto **CIERRE-CAJA** (Desktop\CIERRE-CAJA, `Precios.gs`) ya extrae con Claude las líneas de cada factura escaneada. Las guarda con estas columnas:
