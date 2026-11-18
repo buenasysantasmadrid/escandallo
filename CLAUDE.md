@@ -131,6 +131,7 @@ Cuando conteste una, aplicarla (receta, factor de EQUIVALENCIAS o precio) y borr
 - Al abrir sesión, `.claude/inicio-sesion.ps1` hace git pull y compara Google con los archivos locales.
 - Para publicar cambios: `powershell -NoProfile -ExecutionPolicy Bypass -File .claude\publicar.ps1 "descripción"`. Hace clasp push y despliega una nueva versión en la misma URL.
 - `clasp push` borra en Google lo que no esté aquí. El script lo comprueba antes.
+- **Después de cada cambio, hacer commit y git push sin preguntar.** Luciana no quiere tener que escribir `! git push`. Está permitido en `.claude/settings.json`. La app de GitHub Pages (docs/) solo se actualiza con el push.
 
 ## Hojas del Sheet (fila 1 = cabecera)
 
