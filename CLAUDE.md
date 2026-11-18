@@ -72,6 +72,11 @@ Al 18/11/2026 (este ordenador enlazado; ver "Otro ordenador"):
 - **GitHub Pages: código hecho** (`docs/index.html` y `doPost` en Code.gs). El repo ya es público (paso a hecho). Falta:
   - (b) y (c) de Luciana. Con el Client ID: ponerlo en `CLIENT_ID` de Code.gs y de docs/index.html; en appsscript.json `executeAs: USER_DEPLOYING`, `access: ANYONE_ANONYMOUS` y el scope `script.external_request`; publicar.ps1. Al poner CLIENT_ID, `doGet` muestra solo el enlace a GitHub.
   - Tras ese cambio, el dueño de la implementación tiene que autorizar el nuevo permiso: abrir el editor de Apps Script, ejecutar `emailDelToken_` (o cualquier función) una vez y aceptar.
+- Carta 2026: la primera vez falló ("La regla de formato condicional no puede hacer referencia a una hoja diferente") antes de tocar PLATOS/RECETAS. Arreglado con INDIRECT("CONFIG!B6") (versión 9). Luciana dijo "ok", pero no está comprobado que se haya vuelto a ejecutar bien: mirar en el Sheet si PLATOS tiene "Bife de chorizo" y existe la pestaña FUERA DE CARTA.
+- **Llave de Google (paso c), DONDE NOS QUEDAMOS:** Luciana la está creando en Google Cloud con la cuenta **lfisbein@gmail.com** (el proyecto "Escandallo" de Google Cloud es suyo, no de buenasysantasmadrid). Hecho: paso 1 (crear proyecto "Escandallo") y paso 2 (Google Auth Platform → Comenzar: nombre "Escandallo Buenas y Santas", Externo, correos lfisbein). Siguen:
+  - Paso 3: https://console.cloud.google.com/auth/audience (Público/Audience) → **Publicar aplicación** → confirmar. Comprobar arriba que el proyecto elegido es "Escandallo".
+  - Paso 4: Clientes/Clients → Crear cliente → Aplicación web, nombre "Página GitHub", Orígenes autorizados de JavaScript `https://buenasysantasmadrid.github.io` (sin barra final), sin URIs de redirección → Crear → copiar el ID de cliente (acaba en .apps.googleusercontent.com) y dárselo a Claude.
+  - También: activar GitHub Pages (Settings → Pages → main, /docs → Save), si no lo ha hecho.
 
 ## Día a día
 
