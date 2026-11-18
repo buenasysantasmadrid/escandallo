@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "PowerShell(powershell -NoProfile -ExecutionPolicy Bypass -File .claude/publicar.ps1 *)",
-      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File .claude/publicar.ps1 *)"
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File .claude/publicar.ps1 *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push)",
+      "Bash(git push *)",
+      "PowerShell(git add *)",
+      "PowerShell(git commit *)",
+      "PowerShell(git push)",
+      "PowerShell(git push *)"
     ]
   },
   "hooks": {
