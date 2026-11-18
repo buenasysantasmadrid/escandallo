@@ -142,7 +142,8 @@ hoja('PLATOS',
       {'col': 13, 'formula': '=$M2="Falta receta"', 'fondo': '#E2E3E5'},
       {'col': 13, 'formula': '=$M2="Food cost alto"', 'fondo': '#FFE8B3'},
       {'col': 13, 'formula': '=$M2="OK"', 'fondo': '#D4EDDA'},
-      {'col': 11, 'formula': f'=AND(ISNUMBER($K2),$K2>{ALERTA})', 'fondo': '#F8D7DA'}])
+      # los formatos condicionales no pueden citar otra pestaña directamente: INDIRECT
+      {'col': 11, 'formula': '=AND(ISNUMBER($K2),$K2>INDIRECT("CONFIG!B6"))', 'fondo': '#F8D7DA'}])
 
 # RECETAS
 hoja('RECETAS', ['Plato / elaboración', 'Ingrediente', 'Cantidad', 'Unidad', '€ por unidad\n(precio usado)', 'Coste €', 'Nota'],
