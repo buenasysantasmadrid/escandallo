@@ -81,6 +81,51 @@ Al 18/11/2026 (este ordenador enlazado; ver "Otro ordenador"):
   - Pendiente: lfisbein tiene que ejecutar `autorizar()` una vez en el editor de Apps Script y aceptar los permisos. Hasta entonces doPost devuelve "No tienes permiso para llamar a UrlFetchApp.fetch". Después, probar a entrar en la página de GitHub con las 3 cuentas.
 - DatosIniciales.gs: la versión buena es la de Google (tiene "Falta receta"). El 18/11 se copió aquí antes de publicar. Si el aviso de inicio dice "DatosIniciales (distinto)", mirar cuál es más nuevo antes de hacer clasp push.
 
+## Preguntas pendientes para Luciana (las va contestando poco a poco)
+
+Cuando conteste una, aplicarla (receta, factor de EQUIVALENCIAS o precio) y borrarla de aquí. Anotar la fecha.
+
+**Bebidas** (para hacer sus recetas cuando estén cargadas las asignaciones: Refresco lata, Cerveza San Miguel 1/3, Cerveza San Miguel 0,0 1/3, Cerveza barril San Miguel Magna (l), Café (kg), Café descafeinado (kg), Té (bolsita), Licor (botella) y los vinos por botella):
+1. ¿Cuántos ml lleva la caña doble? (supuesto: 0,4 l)
+2. ¿Cuántas copas salen de una botella de vino? (supuesto: 5 copas de 150 ml)
+3. ¿Cuántos gramos de café lleva un café solo? ¿Y un doble? ¿Cuánta leche llevan el café con leche y el capuchino?
+4. ¿Qué llevan, y cuánto, el tinto de verano, la limonada y el li-mojito?
+5. ¿A quién se compran el agua, el Granini, la Quilmes, la Bailandera IPA y la San Miguel sin gluten, Selecta y Tostada? No aparecen en ninguna factura. Si no, ponerles el precio a mano.
+6. ¿Para el café con licor se usa la crema de orujo Rúa Vieja? ¿Cuántos ml?
+
+**Productos de factura sin confirmar** (en PROPUESTA ASIGNACIONES, sin marcar):
+7. Croutons Atlanta: ¿cuánto pesa cada bolsa (6 por caja)?
+8. Patata dipper Atlanta: ¿cuántos kg trae la caja? ¿En qué plato va?
+9. Tortelloni ricotta-espinaca CBG: ¿se factura por kg o por bolsa de 3 kg?
+10. Helado de vainilla y de frutos rojos (Crem de Lux): ¿envase de 2,3 l, como el de dulce de leche?
+11. Pan rallado Disbesa: ¿cuántos kg trae la bolsa?
+12. Tomate frito Gallina (caja) y tomate pomodoro Ginos: ¿cuántos kg traen? ¿Para qué plato son?
+13. Piñones, uvas pasas y frutos secos (Disbesa): ¿cuánto traen? ¿Para qué plato son?
+14. Salsa Tartufato: ¿cuánto trae el bote? ¿Se usa todavía?
+15. Levadura Promolac: ¿es lo mismo que el "polvo de hornear"?
+16. "TRA" y "NOJO" (Frutapro): ¿son calabaza y albahaca mal leídas?
+17. Cebolla dulce (Frutapro y Varios): ¿es un ingrediente aparte o se usa como cebolla morada o cebolleta?
+18. Supermix (Iberolactal): ¿qué queso es?
+19. Yogur 5 kg (Iberolactal): ¿se factura por kg o por cubo?
+20. Yerba Krauss (Hughes): ¿paquete de 500 g?
+21. Maíz dulce Mercadona: ¿es el mismo ingrediente que el maíz congelado (para la humita)? ¿Y zanahorias de Mercadona, bolsa de 1 kg?
+22. Filetes de secreto (Mercadona): ¿cuánto pesa cada filete?
+23. Compras sueltas (Varios): chocolate negro 85 % (¿100 g?), huevos (¿docena?), Maxi York, queso emmental, rúcula y tiras de bacon: ¿cuánto pesa cada paquete?
+24. Nata para montar Iberolactal: ¿cuántos litros trae cada unidad? (supuesto: 1 l)
+
+**Recetas que faltan o parecen viejas:**
+25. Empanadas de atún, humita y jamón y queso: sin receta (las degustaciones salen más baratas de lo que son).
+26. Hamburguesa Veggie (¿hamburguesa de lentejas como elaboración?) y Hamburguesa del Corral (¿misma hamburguesa casera?).
+27. Milanesas: napolitana y porteña (ternera y pollo) y clásica de pollo, sin receta. A la clásica de ternera le falta el rebozado (pan rallado, huevo).
+28. Quiche de calabaza, Crumble de manzana, Ensalada Oriente vegano y Ensalada de vegetales asados: sin receta.
+29. Palomitas de pollo (plato), Entraña, helados de vainilla y frutos rojos y Alfajor Havanna: sin receta.
+30. Bife de chorizo: lleva solomillo y salsa 4 quesos (era el Lomo). ¿Qué corte y qué guarnición lleva ahora?
+31. Ravioli de calabaza: lleva setas y nata (era el raviol con trufa). ¿Qué salsa lleva ahora?
+32. Quiches "con ensalada": ¿qué ensalada y cuánto?
+33. Cebolla caramelizada, salsa 4 quesos, masa de panqueque y semillas caramelizadas: ¿se compran o se hacen? Si se hacen, pasarlas a elaboración.
+
+**Hecho sin preguntar (avisar si no le parece):** coeficiente 2,5 para los vinos y 3 para el resto de bebidas (`migraciones_` en Recetas.gs). Los platos siguen con 3,5 (CONFIG).
+
 ## Día a día
 
 - Al abrir sesión, `.claude/inicio-sesion.ps1` hace git pull y compara Google con los archivos locales.
@@ -109,6 +154,15 @@ Precio del ingrediente = media ponderada del mes (Σ importe / Σ cantidad). Si 
   - Para no repetir líneas usa la clave proveedor + factura + fecha + producto + cantidad + importe. No usa solo proveedor + factura + producto porque hay líneas legítimas con eso repetido.
 - Menú **Escandallo → Traer precios del cierre de caja**. `activarPreciosDiarios()` (ejecutar una vez en el editor con lfisbein) crea el disparador diario a las 6 h y acepta el permiso nuevo `script.scriptapp`.
 - Después hay que asignar los productos a ingredientes (pestaña Facturas de la app → EQUIVALENCIAS, factor = unidades del escandallo por unidad facturada). Hasta entonces no cambian los precios de los ingredientes.
+- **Asignaciones (18/11/2026):** `PropuestaAsignaciones.gs` tiene la propuesta para los 173 productos (ingrediente, factor y nota) con las respuestas de Luciana.
+  - Respuestas: rúcula en bandeja de 50 g; champiñón, cherry y acelga por kg (manojo = kg; `pasarAKg_`); atún, caja de 16 latas; girasol, 3 garrafas; secreto y costillas para el menú del mediodía; lentejas para la Veggie.
+  - Nata para montar (Iberolactal): 1 ud = 1 l. El tiramisú usa la misma cantidad, pero con este ingrediente.
+  - Menú **Asignaciones: crear propuesta** → pestaña PROPUESTA ASIGNACIONES. **Asignaciones: cargar las marcadas** → EQUIVALENCIAS + ingredientes nuevos.
+- **App (18/11/2026, `Recetas.gs` + docs/index.html):**
+  - Editar recetas y rendimiento (acción `receta`).
+  - Precio manual: INGREDIENTES L manda sobre todo y su origen sale como "Manual". `asegurarPrecioManual_` pone la columna y las fórmulas la primera vez que se cargan los datos.
+  - Ingredientes nuevos (acción `nuevoIng`).
+  - Precios viejos (Ref. 2021 o sin precio) en rojo, contando también lo que hay dentro de las elaboraciones. Hay filtro "Precios viejos".
 - Lo que sigue es la idea original, como referencia:
 
 El proyecto **CIERRE-CAJA** (Desktop\CIERRE-CAJA, `Precios.gs`) ya extrae con Claude las líneas de cada factura escaneada. Las guarda con estas columnas:

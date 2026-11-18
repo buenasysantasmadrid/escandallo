@@ -160,19 +160,20 @@ hoja('RECETAS', ['Plato / elaboración', 'Ingrediente', 'Cantidad', 'Unidad', '�
 rows = ING_ROWS + ELAB_ROWS
 hoja('INGREDIENTES', ['Ingrediente', 'Tipo', 'Unidad\nescandallo', 'Precio ref.\n2021 €/ud', 'Precio medio\nMES €/ud',
                       'Líneas factura\nen el mes', 'Precio medio\nhistórico €/ud', 'PRECIO USADO\n€/ud', 'Origen del precio',
-                      'Variación\nvs 2021', 'Notas'],
-     [240, 95, 80, 90, 95, 90, 100, 100, 150, 80, 480],
-     [[n, t, u, p, None, None, None, None, None, None, note or None] for (n, t, u, p, note) in rows],
+                      'Variación\nvs 2021', 'Notas', 'Precio manual\n€/ud (vacío = automático)'],
+     [240, 95, 80, 90, 95, 90, 100, 100, 150, 80, 480, 110],
+     [[n, t, u, p, None, None, None, None, None, None, note or None, None] for (n, t, u, p, note) in rows],
      {5: f'=IF(OR(A{{r}}="",B{{r}}<>"Compra"),"",IFERROR(SUMIFS(FACTURAS!$G:$G,FACTURAS!$H:$H,A{{r}},FACTURAS!$K:$K,{MES})/SUMIFS(FACTURAS!$I:$I,FACTURAS!$H:$H,A{{r}},FACTURAS!$K:$K,{MES}),""))',
       6: f'=IF(A{{r}}="","",COUNTIFS(FACTURAS!$H:$H,A{{r}},FACTURAS!$K:$K,{MES}))',
       7: '=IF(OR(A{r}="",B{r}<>"Compra"),"",IFERROR(SUMIFS(FACTURAS!$G:$G,FACTURAS!$H:$H,A{r})/SUMIFS(FACTURAS!$I:$I,FACTURAS!$H:$H,A{r}),""))',
-      8: '=IF(A{r}="","",IF(B{r}="Elaboración",IFERROR(INDEX(PLATOS!$G:$G,MATCH(A{r},PLATOS!$A:$A,0)),0),IF(B{r}="Fijo",D{r},IF(E{r}<>"",E{r},IF(G{r}<>"",G{r},D{r})))))',
-      9: '=IF(A{r}="","",IF(B{r}="Elaboración","Receta propia",IF(B{r}="Fijo","Importe fijo",IF(E{r}<>"","Facturas del mes",IF(G{r}<>"","Facturas (histórico)","Ref. 2021")))))',
+      8: '=IF(A{r}="","",IF(N(L{r})>0,L{r},IF(B{r}="Elaboración",IFERROR(INDEX(PLATOS!$G:$G,MATCH(A{r},PLATOS!$A:$A,0)),0),IF(B{r}="Fijo",D{r},IF(E{r}<>"",E{r},IF(G{r}<>"",G{r},D{r}))))))',
+      9: '=IF(A{r}="","",IF(N(L{r})>0,"Manual",IF(B{r}="Elaboración","Receta propia",IF(B{r}="Fijo","Importe fijo",IF(E{r}<>"","Facturas del mes",IF(G{r}<>"","Facturas (histórico)","Ref. 2021"))))))',
       10: '=IF(OR(A{r}="",B{r}<>"Compra",N(D{r})=0),"",H{r}/D{r}-1)'},
-     {4: EUR4, 5: EUR4, 6: '0', 7: EUR4, 8: EUR4, 10: PCT}, [1, 2, 3, 4, 11], 600,
+     {4: EUR4, 5: EUR4, 6: '0', 7: EUR4, 8: EUR4, 10: PCT, 12: EUR4}, [1, 2, 3, 4, 11, 12], 600,
      [{'col': 2, 'lista': ['Compra', 'Elaboración', 'Fijo']}],
      [{'col': 9, 'formula': '=$I2="Facturas del mes"', 'fondo': '#D4EDDA'},
       {'col': 9, 'formula': '=$I2="Ref. 2021"', 'fondo': '#FFE8B3'},
+      {'col': 9, 'formula': '=$I2="Manual"', 'fondo': '#D6E4F5'},
       {'col': 10, 'formula': '=AND(ISNUMBER($J2),$J2>0.1)', 'texto': '#C00000'}])
 
 # FACTURAS

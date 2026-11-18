@@ -43,7 +43,16 @@ main{padding:12px 16px 90px;max-width:820px;margin:0 auto}
 .der b{display:block}
 .der small{color:var(--gris);font-size:12px}
 .pill{display:inline-block;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:600}
-.p-ok{background:var(--okbg);color:var(--ok)} .p-warn{background:var(--warnbg);color:var(--warn)} .p-mal{background:var(--malbg);color:var(--mal)} .p-gris{background:#eee;color:var(--gris)}
+.p-ok{background:var(--okbg);color:var(--ok)} .p-warn{background:var(--warnbg);color:var(--warn)} .p-mal{background:var(--malbg);color:var(--mal)} .p-gris{background:#eee;color:var(--gris)} .p-azul{background:#dde8f6;color:#1f4f8a}
+.viejo{color:var(--mal);font-weight:600}
+tr.tviejo td:first-child{border-left:3px solid var(--mal)}
+.rec{display:flex;flex-direction:column;gap:8px}
+.rlin{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:8px;display:grid;grid-template-columns:1fr 84px 32px;gap:6px;align-items:center}
+.rlin input{width:100%;padding:8px;border:1px solid var(--linea);border-radius:8px;font:inherit;background:#fff}
+.rlin small{grid-column:1/-1;color:var(--gris);font-size:12px}
+.quitar{background:#f3efe6;border:0;border-radius:8px;height:36px;cursor:pointer;color:var(--mal);font-size:16px}
+.fila2{display:flex;gap:8px;margin-top:10px}
+.fila2 .btn{flex:1}
 .sub{color:var(--mal);font-weight:600} .baj{color:var(--ok);font-weight:600}
 .vacio{text-align:center;color:var(--gris);padding:40px 10px}
 .cargando{text-align:center;color:var(--gris);padding:60px 0}
@@ -142,7 +151,7 @@ function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add
 
 function cargar() {
   $('#app').innerHTML = '<div class="cargando">Cargando escandallo…</div>';
-  llamar({ action: 'datos' }).then(j => { st.datos = j; pintar(); })
+  return llamar({ action: 'datos' }).then(j => { st.datos = j; st.ingIdx = null; pintar(); })
     .catch(e => { if (!token) return; $('#app').innerHTML = `<div class="vacio">No se pudo cargar: ${esc(e.message)}<br><br><button class="btn sec" onclick="cargar()">Reintentar</button></div>`; });
 }
 
@@ -168,6 +177,35 @@ function pintar() {
   ({ carta: vistaCarta, ing: vistaIng, pend: vistaPend })[st.tab]();
 }
 
+// ---- Origen del precio de cada ingrediente ----
+// Nuevo = facturas (del mes o anteriores) o manual. Viejo = todavía con el precio del Excel 2021.
+const ORIGEN = {
+  'Facturas del mes': ['p-ok', 'Factura del mes'],
+  'Facturas (histórico)': ['p-ok', 'Factura anterior'],
+  'Manual': ['p-azul', 'Manual'],
+  'Ref. 2021': ['p-mal', 'Precio viejo 2021'],
+  'Receta propia': ['p-gris', 'Receta propia'],
+  'Importe fijo': ['p-gris', 'Importe fijo']
+};
+const pillOrigen = i => { const [c, t] = ORIGEN[i.origen] || ['p-gris', i.origen || '—'];
+  return `<span class="pill ${c}">${esc(i.usado ? t : (i.origen === 'Ref. 2021' ? 'Sin precio' : t))}</span>`; };
+const esViejo = i => !i || i.origen === 'Ref. 2021' || (i.tipo === 'Compra' && !i.usado);
+
+// Ingredientes con precio viejo o sin precio en la receta de un plato (también dentro de sus elaboraciones).
+function viejosDe(nombre, visto = new Set()) {
+  if (visto.has(nombre)) return new Set(); visto.add(nombre);
+  const d = st.datos, out = new Set();
+  const ing = st.ingIdx || (st.ingIdx = Object.fromEntries(d.ingredientes.map(i => [i.nombre, i])));
+  d.recetas.filter(r => r.plato === nombre).forEach(r => {
+    const i = ing[r.ing];
+    if (i && i.tipo === 'Elaboración') viejosDe(r.ing, visto).forEach(x => out.add(x));
+    else if (esViejo(i)) out.add(r.ing);
+  });
+  return out;
+}
+const num = s => { s = String(s ?? '').trim(); if (!s) return NaN; if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); return Number(s); };
+const fmt = n => n == null || isNaN(n) ? '' : String(Math.round(n * 10000) / 10000).replace('.', ',');
+
 function claseFc(p) {
   if (p.tipo === 'Elaboración') return ['p-gris', 'Elaboración'];
   if (p.aviso === 'Falta receta') return ['p-gris', 'Falta receta'];
@@ -179,9 +217,11 @@ function claseFc(p) {
 
 function vistaCarta() {
   const d = st.datos;
-  const cats = ['Todas', ...new Set(d.platos.filter(p => p.tipo === 'Plato').map(p => p.cat)), 'Elaboraciones', 'Con aviso'];
+  const cats = ['Todas', ...new Set(d.platos.filter(p => p.tipo === 'Plato').map(p => p.cat)), 'Elaboraciones', 'Con aviso', 'Precios viejos'];
+  const viejos = Object.fromEntries(d.platos.map(p => [p.nombre, viejosDe(p.nombre).size]));
   let L = d.platos.filter(p => {
     if (st.cat === 'Elaboraciones') return p.tipo === 'Elaboración';
+    if (st.cat === 'Precios viejos') return viejos[p.nombre] > 0;
     if (p.tipo === 'Elaboración') return false;
     if (st.cat === 'Con aviso') return p.aviso && p.aviso !== 'OK';
     return st.cat === 'Todas' || p.cat === st.cat;
@@ -200,15 +240,44 @@ function vistaCarta() {
     </div>
     <input class="buscar" id="q" placeholder="Buscar plato…" value="${esc(st.q)}">
     <div class="chips">${cats.map(c => `<button class="chip ${c === st.cat ? 'on' : ''}" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+    ${st.cat === 'Elaboraciones' ? `<button class="btn sec" id="nuevaElab" style="margin-bottom:10px">+ Nueva elaboración</button>
+    <p class="nota">Una elaboración es una receta que se usa dentro de otros platos (la hamburguesa casera, una salsa, un rebozado…). Se crea aquí y después aparece como ingrediente.</p>` : ''}
     <div class="lista">${L.map((p, i) => { const [cl, tx] = claseFc(p); return `
       <div class="fila" data-i="${d.platos.indexOf(p)}">
-        <div class="nom"><b>${esc(p.nombre)}</b><small>${esc(p.cat)} · coste ${eur(p.costeRacion, p.tipo === 'Elaboración' ? 3 : 2)}${p.tipo === 'Elaboración' ? ' / ' + esc(p.unidad === 'kg' ? 'kg' : 'ud') : ''}</small></div>
+        <div class="nom"><b>${esc(p.nombre)}</b><small>${esc(p.cat)} · coste ${eur(p.costeRacion, p.tipo === 'Elaboración' ? 3 : 2)}${p.tipo === 'Elaboración' ? ' / ' + esc(p.unidad === 'kg' ? 'kg' : 'ud') : ''}${viejos[p.nombre] ? ` · <span class="viejo">${viejos[p.nombre]} precio${viejos[p.nombre] > 1 ? 's' : ''} viejo${viejos[p.nombre] > 1 ? 's' : ''}</span>` : ''}</small></div>
         <div class="der">${p.tipo === 'Plato' ? `<b>${eur(p.pvp)}</b>` : ''}<span class="pill ${cl}">${tx}</span></div>
       </div>`; }).join('') || '<div class="vacio">Nada que mostrar</div>'}</div>
     <p class="nota">Food cost = coste por ración ÷ PVP sin IVA. Mínimo = coste × coeficiente (${String(d.config.coef).replace('.', ',')}) + IVA.</p>`;
   $('#q').oninput = e => { st.q = e.target.value; const pos = e.target.selectionStart; vistaCarta(); const q = $('#q'); q.focus(); q.setSelectionRange(pos, pos); };
   document.querySelectorAll('.chip').forEach(b => b.onclick = () => { st.cat = b.dataset.c; vistaCarta(); });
   document.querySelectorAll('.fila').forEach(f => f.onclick = () => detallePlato(d.platos[f.dataset.i]));
+  if ($('#nuevaElab')) $('#nuevaElab').onclick = nuevaElab;
+}
+
+function nuevaElab() {
+  const cats = [...new Set(st.datos.platos.map(p => p.cat).filter(Boolean))].map(c => `<option value="${esc(c)}">`).join('');
+  abrirHoja(`
+    <h2>Nueva elaboración</h2>
+    <datalist id="dlCat">${cats}</datalist>
+    <div class="edit">
+      <div class="campo" style="grid-column:1/-1"><label>Nombre (por ejemplo: Hamburguesa veggie (elab.))</label><input id="eNom"></div>
+      <div class="campo"><label>Cuánto sale de la receta</label><input id="eRend" inputmode="decimal" placeholder="70"></div>
+      <div class="campo"><label>Unidad (ud, kg, l…)</label><input id="eUd" value="ud"></div>
+      <div class="campo" style="grid-column:1/-1"><label>Categoría</label><input id="eCat" list="dlCat"></div>
+    </div>
+    <button class="btn" id="eCrear">Crear y escribir su receta</button>
+    <p class="nota">Ejemplo: la hamburguesa casera sale 70 ud de una receta con 10 kg de carne. Al usarla en un plato pondrás 1 ud.</p>`);
+  $('#eCrear').onclick = async () => {
+    const nombre = $('#eNom').value.trim(), rend = $('#eRend').value.trim(), unidad = $('#eUd').value.trim(), cat = $('#eCat').value.trim();
+    if (!nombre || !unidad || !(num(rend) > 0)) { toast('Falta el nombre, cuánto sale o la unidad'); return; }
+    const b = $('#eCrear'); b.disabled = true; b.textContent = 'Creando…';
+    try {
+      await llamar({ action: 'nuevaElab', nombre, rend: String(num(rend)), unidad, cat });
+      cerrarHoja(); toast('Elaboración creada');
+      await cargar();
+      const p = st.datos.platos.find(x => x.nombre === nombre); if (p) editarReceta(p);
+    } catch (e) { toast(e.message); b.disabled = false; b.textContent = 'Crear y escribir su receta'; }
+  };
 }
 
 function detallePlato(p) {
@@ -217,9 +286,11 @@ function detallePlato(p) {
   const ingIdx = Object.fromEntries(d.ingredientes.map(i => [i.nombre, i]));
   const total = lin.reduce((a, r) => a + (r.coste || 0), 0);
   const esPlato = p.tipo === 'Plato';
+  const viejos = viejosDe(p.nombre);
   abrirHoja(`
     <h2>${esc(p.nombre)}</h2>
     <div class="meta">${esc(p.cat)} · receta para ${String(p.rend).replace('.', ',')} ${p.rend != 1 && p.unidad === 'ración' ? 'raciones' : esc(p.unidad)}</div>
+    ${viejos.size ? `<p class="nota viejo">Ojo: ${viejos.size} ingrediente${viejos.size > 1 ? 's' : ''} con precio viejo (2021) o sin precio: ${esc([...viejos].join(', '))}. El coste puede no ser real.</p>` : ''}
     <div class="resumen">
       <div class="kpi"><b>${eur(p.costeRacion, esPlato ? 2 : 3)}</b><span>Coste / ${esPlato ? 'ración' : esc(p.unidad)}</span></div>
       ${esPlato ? `<div class="kpi"><b>${eur(p.pvpMin)}</b><span>PVP mínimo</span></div>
@@ -227,7 +298,8 @@ function detallePlato(p) {
     </div>
     <table><thead><tr><th>Ingrediente</th><th class="n">Cant.</th><th class="n">€/ud</th><th class="n">Coste</th></tr></thead><tbody>
     ${lin.map(r => { const ig = ingIdx[r.ing] || {}; const v = ig.variacion;
-      return `<tr><td>${esc(r.ing)}<br><small style="color:var(--gris)">${esc(ig.origen || '')}${v != null && Math.abs(v) >= 0.01 ? ` · <span class="${v > 0 ? 'sub' : 'baj'}">${v > 0 ? '+' : ''}${pct(v)}</span>` : ''}</small></td>
+      const vj = ig.tipo === 'Elaboración' ? viejosDe(r.ing).size > 0 : esViejo(ingIdx[r.ing]);
+      return `<tr class="${vj ? 'tviejo' : ''}"><td>${esc(r.ing)}<br><small>${pillOrigen(ig)}${ig.tipo === 'Elaboración' && vj ? ' <span class="viejo">lleva precios viejos</span>' : ''}${v != null && Math.abs(v) >= 0.01 ? ` <span class="${v > 0 ? 'sub' : 'baj'}">${v > 0 ? '+' : ''}${pct(v)} vs 2021</span>` : ''}</small></td>
       <td class="n">${String(r.cant).replace('.', ',')} ${esc(r.unidad)}</td><td class="n">${eur(r.precio, 3)}</td><td class="n">${eur(r.coste)}</td></tr>`; }).join('')}
     </tbody><tfoot><tr><td colspan="3">Total receta</td><td class="n">${eur(total)}</td></tr></tfoot></table>
     ${p.coste2021 != null ? `<p class="nota">Coste por ración en el Excel 2021: ${eur(p.coste2021, esPlato ? 2 : 3)}</p>` : ''}
@@ -236,8 +308,9 @@ function detallePlato(p) {
       <div class="campo"><label>PVP carta (IVA incl.)</label><input id="ePvp" inputmode="decimal" value="${p.pvp != null ? String(p.pvp).replace('.', ',') : ''}"></div>
       <div class="campo"><label>Coeficiente (vacío = ${String(d.config.coef).replace('.', ',')})</label><input id="eCoef" inputmode="decimal" value="${p.coef != null ? String(p.coef).replace('.', ',') : ''}"></div>
     </div>
-    <button class="btn" id="eGuardar">Guardar cambios</button>` : ''}
-    <p class="nota">Para cambiar ingredientes o cantidades, edita la hoja RECETAS del Google Sheet.</p>`);
+    <button class="btn" id="eGuardar">Guardar PVP y coeficiente</button>` : ''}
+    <div class="fila2"><button class="btn sec" id="eReceta">✎ ${lin.length ? 'Modificar la receta' : 'Crear la receta'}</button></div>`);
+  $('#eReceta').onclick = () => editarReceta(p);
   if (esPlato) $('#eGuardar').onclick = async () => {
     const b = $('#eGuardar'); b.disabled = true; b.textContent = 'Guardando…';
     try {
@@ -249,24 +322,132 @@ function detallePlato(p) {
   };
 }
 
+// ---- Editar receta ----
+function editarReceta(p) {
+  const d = st.datos;
+  const ingIdx = Object.fromEntries(d.ingredientes.map(i => [i.nombre, i]));
+  let lin = d.recetas.filter(r => r.plato === p.nombre).map(r => ({ ing: r.ing, cant: fmt(r.cant), nota: r.nota || '' }));
+  const opts = d.ingredientes.filter(i => i.nombre !== p.nombre).map(i => `<option value="${esc(i.nombre)}">`).join('');
+  const total = () => lin.reduce((a, l) => { const i = ingIdx[l.ing], c = num(l.cant); return a + (i && c > 0 ? c * (i.usado || 0) : 0); }, 0);
+  const pintarLin = () => {
+    $('#rLin').innerHTML = lin.map((l, k) => { const i = ingIdx[l.ing], c = num(l.cant);
+      return `<div class="rlin">
+        <input list="dlRec" data-k="${k}" data-f="ing" value="${esc(l.ing)}" placeholder="Ingrediente">
+        <input data-k="${k}" data-f="cant" inputmode="decimal" value="${esc(l.cant)}" placeholder="Cant.">
+        <button class="quitar" data-q="${k}" aria-label="Quitar">✕</button>
+        <small>${i ? `${esc(i.unidad)} · ${eur(i.usado, 3)}/${esc(i.unidad)} ${pillOrigen(i)}${c > 0 ? ` · coste ${eur(c * (i.usado || 0))}` : ''}`
+          : (l.ing ? '<span class="viejo">No existe ese ingrediente: elige uno de la lista o créalo en Ingredientes</span>' : 'Escribe para buscar')}</small>
+      </div>`; }).join('') || '<div class="vacio">Sin ingredientes</div>';
+    $('#rTotal').textContent = eur(total());
+    $('#rRacion').textContent = eur(total() / (num($('#rRend').value) || 1), 3);
+    document.querySelectorAll('#rLin input').forEach(el => el.onchange = () => { lin[el.dataset.k][el.dataset.f] = el.value.trim(); pintarLin(); });
+    document.querySelectorAll('#rLin .quitar').forEach(b => b.onclick = () => { lin.splice(Number(b.dataset.q), 1); pintarLin(); });
+  };
+  abrirHoja(`
+    <h2>Receta · ${esc(p.nombre)}</h2>
+    <div class="meta">Cantidades en la unidad de cada ingrediente. Los cambios se ven en el coste al momento; se guardan al pulsar Guardar.</div>
+    <datalist id="dlRec">${opts}</datalist>
+    <div class="campo" style="margin-bottom:10px"><label>Rendimiento: cuántas ${p.unidad === 'ración' ? 'raciones' : esc(p.unidad)} salen de esta receta</label><input id="rRend" inputmode="decimal" value="${fmt(p.rend)}"></div>
+    <div class="rec" id="rLin"></div>
+    <div class="fila2"><button class="btn sec" id="rMas">+ Añadir ingrediente</button></div>
+    <div class="resumen" style="margin-top:12px">
+      <div class="kpi"><b id="rTotal">—</b><span>Total receta</span></div>
+      <div class="kpi"><b id="rRacion">—</b><span>Por ${p.unidad === 'ración' ? 'ración' : esc(p.unidad)}</span></div>
+    </div>
+    <div class="fila2"><button class="btn sec" id="rCancelar">Cancelar</button><button class="btn" id="rGuardar">Guardar receta</button></div>`);
+  pintarLin();
+  $('#rRend').oninput = pintarLin;
+  $('#rMas').onclick = () => { lin.push({ ing: '', cant: '', nota: '' }); pintarLin(); const ins = document.querySelectorAll('#rLin input[data-f="ing"]'); ins[ins.length - 1].focus(); };
+  $('#rCancelar').onclick = () => detallePlato(p);
+  $('#rGuardar').onclick = async () => {
+    const malas = lin.filter(l => l.ing || l.cant).filter(l => !ingIdx[l.ing] || !(num(l.cant) > 0));
+    if (malas.length) { toast('Revisa: cada línea necesita un ingrediente de la lista y una cantidad'); return; }
+    const b = $('#rGuardar'); b.disabled = true; b.textContent = 'Guardando…';
+    try {
+      await llamar({ action: 'receta', plato: p.nombre, rend: $('#rRend').value.trim(),
+        lineas: lin.filter(l => l.ing).map(l => ({ ing: l.ing, cant: String(num(l.cant)), nota: l.nota })) });
+      cerrarHoja(); toast('Receta guardada'); cargar();
+    } catch (e) { toast(e.message); b.disabled = false; b.textContent = 'Guardar receta'; }
+  };
+}
+
+// ---- Ingredientes ----
 function vistaIng() {
   const d = st.datos;
   let L = d.ingredientes.filter(i => i.tipo !== 'Fijo');
-  if (st.soloSubidas) L = L.filter(i => i.variacion != null && i.variacion > 0.1);
+  if (st.filtroIng === 'subidas') L = L.filter(i => i.variacion != null && i.variacion > 0.1);
+  if (st.filtroIng === 'viejos') L = L.filter(i => i.tipo === 'Compra' && esViejo(i));
+  if (st.filtroIng === 'manual') L = L.filter(i => i.origen === 'Manual');
   if (st.q) L = L.filter(i => i.nombre.toLowerCase().includes(st.q.toLowerCase()));
-  const ori = { 'Facturas del mes': 'p-ok', 'Facturas (histórico)': 'p-warn', 'Ref. 2021': 'p-mal', 'Receta propia': 'p-gris' };
+  const nViejos = d.ingredientes.filter(i => i.tipo === 'Compra' && esViejo(i)).length;
+  const chip = (k, t) => `<button class="chip ${(st.filtroIng || 'todos') === k ? 'on' : ''}" data-f="${k}">${t}</button>`;
   $('#cont').innerHTML = `
     <input class="buscar" id="q" placeholder="Buscar ingrediente…" value="${esc(st.q)}">
-    <div class="chips"><button class="chip ${st.soloSubidas ? '' : 'on'}" id="cTodos">Todos</button><button class="chip ${st.soloSubidas ? 'on' : ''}" id="cSub">Subidas &gt; 10 % vs 2021</button></div>
+    <div class="chips">${chip('todos', 'Todos')}${chip('viejos', `Precio viejo (${nViejos})`)}${chip('manual', 'Manuales')}${chip('subidas', 'Subidas &gt; 10 % vs 2021')}</div>
+    <button class="btn sec" id="nuevoIng" style="margin-bottom:10px">+ Nuevo ingrediente</button>
     <div class="lista">${L.map(i => `
-      <div class="fila" style="cursor:default">
-        <div class="nom"><b>${esc(i.nombre)}</b><small><span class="pill ${ori[i.origen] || 'p-gris'}">${esc(i.origen)}</span>${i.lineas ? ` · ${i.lineas} línea${i.lineas > 1 ? 's' : ''} este mes` : ''}</small></div>
-        <div class="der"><b>${eur(i.usado, 3)}</b><small>/ ${esc(i.unidad)}${i.variacion != null && Math.abs(i.variacion) >= 0.01 ? ` · <span class="${i.variacion > 0 ? 'sub' : 'baj'}">${i.variacion > 0 ? '+' : ''}${pct(i.variacion)}</span>` : ''}</small></div>
+      <div class="fila" data-n="${esc(i.nombre)}">
+        <div class="nom"><b>${esc(i.nombre)}</b><small>${pillOrigen(i)}${i.lineas ? ` · ${i.lineas} línea${i.lineas > 1 ? 's' : ''} este mes` : ''}</small></div>
+        <div class="der"><b class="${i.tipo === 'Compra' && esViejo(i) ? 'viejo' : ''}">${eur(i.usado, 3)}</b><small>/ ${esc(i.unidad)}${i.variacion != null && Math.abs(i.variacion) >= 0.01 ? ` · <span class="${i.variacion > 0 ? 'sub' : 'baj'}">${i.variacion > 0 ? '+' : ''}${pct(i.variacion)}</span>` : ''}</small></div>
       </div>`).join('') || '<div class="vacio">Nada que mostrar</div>'}</div>
-    <p class="nota">Verde: precio medio de las facturas del mes. Ámbar: media de facturas anteriores. Rojo: aún con el precio del Excel 2021.</p>`;
+    <p class="nota">Verde: precio de las facturas (del mes o, si este mes no hubo compras, de meses anteriores). Azul: precio puesto a mano. Rojo: todavía con el precio viejo del Excel 2021. Toca un ingrediente para poner su precio a mano.</p>`;
   $('#q').oninput = e => { st.q = e.target.value; const pos = e.target.selectionStart; vistaIng(); const q = $('#q'); q.focus(); q.setSelectionRange(pos, pos); };
-  $('#cTodos').onclick = () => { st.soloSubidas = false; vistaIng(); };
-  $('#cSub').onclick = () => { st.soloSubidas = true; vistaIng(); };
+  document.querySelectorAll('.chip').forEach(b => b.onclick = () => { st.filtroIng = b.dataset.f; vistaIng(); });
+  document.querySelectorAll('.fila').forEach(f => f.onclick = () => detalleIng(d.ingredientes.find(i => i.nombre === f.dataset.n)));
+  $('#nuevoIng').onclick = nuevoIng;
+}
+
+function detalleIng(i) {
+  const d = st.datos;
+  const usos = [...new Set(d.recetas.filter(r => r.ing === i.nombre).map(r => r.plato))];
+  const fila = (t, v) => `<tr><td>${t}</td><td class="n">${v}</td></tr>`;
+  const compra = i.tipo === 'Compra';
+  abrirHoja(`
+    <h2>${esc(i.nombre)}</h2>
+    <div class="meta">${esc(i.tipo)} · por ${esc(i.unidad)}</div>
+    <div class="resumen"><div class="kpi"><b>${eur(i.usado, 3)}</b><span>Precio usado</span></div><div class="kpi">${pillOrigen(i)}<span style="display:block;margin-top:4px">De dónde sale</span></div></div>
+    ${compra ? `<table><tbody>
+      ${fila('Facturas de este mes', i.mes != null ? eur(i.mes, 3) + (i.lineas ? ` (${i.lineas} línea${i.lineas > 1 ? 's' : ''})` : '') : '—')}
+      ${fila('Facturas de meses anteriores', eur(i.hist, 3))}
+      ${fila('Excel 2021 (viejo)', eur(i.ref, 3))}
+      ${fila('Puesto a mano', i.manual != null ? eur(i.manual, 3) : '—')}
+    </tbody></table>
+    <div class="edit">
+      <div class="campo" style="grid-column:1/-1"><label>Precio a mano, € por ${esc(i.unidad)} (vacío = usar las facturas)</label><input id="iMan" inputmode="decimal" value="${fmt(i.manual)}"></div>
+    </div>
+    <div class="fila2">${i.manual != null ? '<button class="btn sec" id="iQuitar">Quitar precio manual</button>' : ''}<button class="btn" id="iGuardar">Guardar precio</button></div>
+    <p class="nota">El precio a mano manda sobre el de las facturas hasta que lo quites.</p>` : `<p class="nota">${i.tipo === 'Elaboración' ? 'Su precio sale de su propia receta (en la Carta, filtro Elaboraciones).' : 'Importe fijo por plato.'}</p>`}
+    ${usos.length ? `<p class="nota">Se usa en: ${esc(usos.join(', '))}</p>` : '<p class="nota">No se usa en ninguna receta.</p>'}`);
+  if (!compra) return;
+  const enviar = async (valor, b) => {
+    b.disabled = true; b.textContent = 'Guardando…';
+    try { await llamar({ action: 'precioManual', ingrediente: i.nombre, valor }); cerrarHoja(); toast('Precio guardado'); cargar(); }
+    catch (e) { toast(e.message); b.disabled = false; b.textContent = 'Guardar precio'; }
+  };
+  $('#iGuardar').onclick = () => { const v = $('#iMan').value.trim(); if (v && !(num(v) > 0)) { toast('Precio no válido'); return; } enviar(v ? String(num(v)) : '', $('#iGuardar')); };
+  if ($('#iQuitar')) $('#iQuitar').onclick = () => enviar('', $('#iQuitar'));
+}
+
+function nuevoIng() {
+  const unidades = [...new Set(st.datos.ingredientes.map(i => i.unidad).filter(Boolean))].map(u => `<option value="${esc(u)}">`).join('');
+  abrirHoja(`
+    <h2>Nuevo ingrediente</h2>
+    <datalist id="dlUd">${unidades}</datalist>
+    <div class="edit">
+      <div class="campo" style="grid-column:1/-1"><label>Nombre</label><input id="nNom"></div>
+      <div class="campo"><label>Unidad (kg, l, ud…)</label><input id="nUd" list="dlUd" value="kg"></div>
+      <div class="campo"><label>Precio € por unidad (opcional)</label><input id="nPre" inputmode="decimal"></div>
+    </div>
+    <button class="btn" id="nGuardar">Crear ingrediente</button>
+    <p class="nota">Si no pones precio, se llenará con las facturas cuando asignes un producto a este ingrediente.</p>`);
+  $('#nGuardar').onclick = async () => {
+    const nombre = $('#nNom').value.trim(), unidad = $('#nUd').value.trim(), pre = $('#nPre').value.trim();
+    if (!nombre || !unidad) { toast('Falta el nombre o la unidad'); return; }
+    if (pre && !(num(pre) > 0)) { toast('Precio no válido'); return; }
+    const b = $('#nGuardar'); b.disabled = true; b.textContent = 'Guardando…';
+    try { await llamar({ action: 'nuevoIng', nombre, unidad, valor: pre ? String(num(pre)) : '' }); cerrarHoja(); toast('Ingrediente creado'); cargar(); }
+    catch (e) { toast(e.message); b.disabled = false; b.textContent = 'Crear ingrediente'; }
+  };
 }
 
 function vistaPend() {

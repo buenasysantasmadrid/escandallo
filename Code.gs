@@ -107,6 +107,10 @@ function ejecutar_(p, email) {
       case 'coef':    res = guardarCoef_(p.plato, p.valor); break;
       case 'asignar': res = asignar_(p.producto, p.ingrediente, p.factor, p.proveedor); break;
       case 'mes':     res = cambiarMes_(p.fecha); break;
+      case 'receta':  res = guardarReceta_(p.plato, p.lineas, p.rend); break;
+      case 'precioManual': res = precioManual_(p.ingrediente, p.valor); break;
+      case 'nuevoIng': res = nuevoIngrediente_(p.nombre, p.unidad, p.valor); break;
+      case 'nuevaElab': res = nuevaElaboracion_(p.nombre, p.rend, p.unidad, p.cat); break;
       default: throw new Error('Acción desconocida: ' + p.action);
     }
     return JSON.stringify(Object.assign({ ok: true }, res));
@@ -146,6 +150,8 @@ function filas_(nombre, colClave) {
 const num_ = x => (x === '' || x === null || isNaN(x)) ? null : Number(x);
 
 function datos_() {
+  asegurarPrecioManual_();
+  migraciones_();
   const cf = hoja_(HOJA.CONFIG).getRange('B2:B6').getValues().map(r => r[0]);
   const config = {
     coef: num_(cf[0]), iva: num_(cf[1]),
@@ -165,7 +171,7 @@ function datos_() {
 
   const ingredientes = filas_(HOJA.INGREDIENTES).map(({ v }) => ({
     nombre: v[0], tipo: v[1], unidad: v[2], ref: num_(v[3]), mes: num_(v[4]), lineas: num_(v[5]),
-    hist: num_(v[6]), usado: num_(v[7]), origen: v[8], variacion: num_(v[9])
+    hist: num_(v[6]), usado: num_(v[7]), origen: v[8], variacion: num_(v[9]), manual: num_(v[11])
   }));
 
   // productos de factura sin ingrediente asignado
@@ -239,6 +245,8 @@ function onOpen() {
   SpreadsheetApp.getUi().createMenu('Escandallo')
     .addItem('Volver al mes en curso', 'mesActual')
     .addItem('Traer precios del cierre de caja', 'traerFacturasMenu')
+    .addItem('Asignaciones: crear propuesta', 'crearPropuestaAsignacionesMenu')
+    .addItem('Asignaciones: cargar las marcadas', 'cargarAsignacionesMarcadasMenu')
     .addItem('Actualizar a la carta 2026', 'actualizarCarta2026')
     .addSeparator()
     .addItem('Instalar (solo la primera vez)', 'instalarEscandallo')
