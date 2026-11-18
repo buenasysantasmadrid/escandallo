@@ -73,15 +73,13 @@ Al 18/11/2026 (este ordenador enlazado; ver "Otro ordenador"):
   - (b) y (c) de Luciana. Con el Client ID: ponerlo en `CLIENT_ID` de Code.gs y de docs/index.html; en appsscript.json `executeAs: USER_DEPLOYING`, `access: ANYONE_ANONYMOUS` y el scope `script.external_request`; publicar.ps1. Al poner CLIENT_ID, `doGet` muestra solo el enlace a GitHub.
   - Tras ese cambio, el dueño de la implementación tiene que autorizar el nuevo permiso: abrir el editor de Apps Script, ejecutar `emailDelToken_` (o cualquier función) una vez y aceptar.
 - Carta 2026: la primera vez falló ("La regla de formato condicional no puede hacer referencia a una hoja diferente") antes de tocar PLATOS/RECETAS. Arreglado con INDIRECT("CONFIG!B6") (versión 9). Luciana dijo "ok", pero no está comprobado que se haya vuelto a ejecutar bien: mirar en el Sheet si PLATOS tiene "Bife de chorizo" y existe la pestaña FUERA DE CARTA.
-- **Llave de Google (paso c), DONDE NOS QUEDAMOS:** Luciana la está creando en Google Cloud con la cuenta **lfisbein@gmail.com** (el proyecto "Escandallo" de Google Cloud es suyo, no de buenasysantasmadrid). Hecho: paso 1 (crear proyecto "Escandallo") y paso 2 (Google Auth Platform → Comenzar: nombre "Escandallo Buenas y Santas", Externo, correos lfisbein). Siguen:
-  - Paso 3: Google no deja "Publicar aplicación" sin rellenar "Información de la marca". Luciana quiere publicarla, no dejarla en Prueba. Hay que rellenar:
-    - Página principal: `https://buenasysantasmadrid.github.io/escandallo/`.
-    - Privacidad: `https://buenasysantasmadrid.github.io/escandallo/privacidad.html` (`docs/privacidad.html`).
-    - Dominio autorizado: `buenasysantasmadrid.github.io`.
-    - Sin logotipo, porque obliga a verificar la app.
-    - Después: Público → Publicar aplicación. Requiere GitHub Pages activo (paso b).
-  - Paso 4: Clientes/Clients → Crear cliente → Aplicación web, nombre "Página GitHub", Orígenes autorizados de JavaScript `https://buenasysantasmadrid.github.io` (sin barra final), sin URIs de redirección → Crear → copiar el ID de cliente (acaba en .apps.googleusercontent.com) y dárselo a Claude.
-  - También: activar GitHub Pages (Settings → Pages → main, /docs → Save), si no lo ha hecho.
+- **Llave de Google: HECHA el 18/11/2026.** Proyecto "Escandallo" de Google Cloud con lfisbein@gmail.com, app publicada (en producción).
+  - Marca: página principal `https://buenasysantasmadrid.github.io/escandallo/`, privacidad `docs/privacidad.html`, dominio autorizado `buenasysantasmadrid.github.io`. Sin logotipo, porque obliga a verificar.
+  - Cliente web "Página GitHub", con origen `https://buenasysantasmadrid.github.io`. El CLIENT_ID está en Code.gs y en docs/index.html.
+  - GitHub Pages: main, carpeta /docs (comprobado, las páginas dan 200).
+  - appsscript.json: `USER_DEPLOYING`, `ANYONE_ANONYMOUS` y `script.external_request`. Publicado como versión 11; clasp está conectado como lfisbein.
+  - Pendiente: lfisbein tiene que ejecutar `autorizar()` una vez en el editor de Apps Script y aceptar los permisos. Hasta entonces doPost devuelve "No tienes permiso para llamar a UrlFetchApp.fetch". Después, probar a entrar en la página de GitHub con las 3 cuentas.
+- DatosIniciales.gs: la versión buena es la de Google (tiene "Falta receta"). El 18/11 se copió aquí antes de publicar. Si el aviso de inicio dice "DatosIniciales (distinto)", mirar cuál es más nuevo antes de hacer clasp push.
 
 ## Día a día
 

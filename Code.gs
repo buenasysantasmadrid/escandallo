@@ -49,7 +49,7 @@ function doGet() {
 }
 
 // ID de cliente OAuth (Google Cloud → Credentials) de la página de GitHub Pages. No es secreto.
-const CLIENT_ID = 'PENDIENTE';
+const CLIENT_ID = '1050764622239-lbl39rs0pjcr1ms46eldrd4e680kvscr.apps.googleusercontent.com';
 const PAGINA_GITHUB = 'https://buenasysantasmadrid.github.io/escandallo/';
 
 /** Peticiones de la página de GitHub Pages: {token, action, ...}. Comprueba el token de Google. */
@@ -65,6 +65,13 @@ function doPost(e) {
     res = { ok: false, error: String(err.message || err) };
   }
   return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/** Ejecutar una vez desde el editor (con la cuenta que publica) para aceptar los permisos de la app. */
+function autorizar() {
+  UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=x', { muteHttpExceptions: true });
+  SpreadsheetApp.getActive().getName();
+  Logger.log('Permisos aceptados.');
 }
 
 /** Valida el ID token de Google (firma, caducidad y destinatario) y devuelve el email, o '' si no vale. */
