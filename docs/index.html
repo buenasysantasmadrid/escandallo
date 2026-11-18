@@ -111,6 +111,7 @@ const st = { datos: null, tab: leer('esc_tab') || 'carta', cat: 'Todas', q: '', 
 // ---- Configuración ----
 // URL /exec del Apps Script (la de .claude/implementacion.txt) y el ID de cliente OAuth de Google Cloud.
 const API_URL = 'https://script.google.com/macros/s/AKfycbz1X3Im_cZMZGlmjvv4IZnVbIu-e3Qgf9wGeW0lnosHaNsQhLiOo4nzZxV-HujMFBVvEQ/exec';
+const VERSION = '18/11 16:10';
 const CLIENT_ID = '1050764622239-lbl39rs0pjcr1ms46eldrd4e680kvscr.apps.googleusercontent.com';
 
 // ---- Sesión con Google ----
@@ -163,7 +164,7 @@ function pintar() {
   $('#app').innerHTML = `
   <header>
     <div class="top">
-      <h1>Escandallo<small>${esc(d.usuario || "Buenas y Santas")}<button class="salir" onclick="salir()">salir</button></small></h1>
+      <h1>Escandallo<small>${esc(d.usuario || "Buenas y Santas")} · versión ${VERSION}<button class="salir" onclick="salir()">salir</button></small></h1>
       <input type="month" class="mes" id="mes" value="${esc(d.config.mes)}">
       <button class="icono" id="recargar" title="Recargar">↻</button>
     </div>
