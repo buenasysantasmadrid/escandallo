@@ -66,6 +66,13 @@ Al 04/11/2026:
     - (c) Google Cloud Console (buenasysantasmadrid): crear el proyecto "Escandallo", pantalla de consentimiento OAuth (External, solo email/perfil, publicar en producción) y Credentials → OAuth client ID → Web application → Authorized JavaScript origins `https://buenasysantasmadrid.github.io`. Darle a Claude el Client ID, que no es secreto.
   - Revisado antes de hacerlo público: el historial de git no tiene costes (DatosIniciales.gs, el Excel y el .zip no se suben).
 
+Al 18/11/2026 (este ordenador enlazado; ver "Otro ordenador"):
+- **Carta 2026** (PDFs `puerta_860X285_mayo2026.pdf` y `carta_bebidas_postres_a4_julio2026.pdf`): `Carta2026.gs`, menú **Escandallo → Actualizar a la carta 2026**. Quita 17 platos/elaboraciones (copia en la pestaña FUERA DE CARTA), renombra (Lomo→Bife de chorizo, Milanesa→Milanesa clásica de ternera, Raviol c/ trufa→Ravioli de calabaza, Vegetariano→Wrap vegetariano, Granjero→Entrepan Granjero Héctor…), pone PVP nuevos y añade platos nuevos y bebidas sin receta. Degustaciones = receta con 1 empanada de cada (las empanadas están en INGREDIENTES como Elaboración). Luciana tiene que lanzarlo desde el menú (decidido con ella: guardar copia, incluir bebidas, nuevos con aviso). Comprobar después que se ejecutó.
+- Aviso nuevo en PLATOS: **"Falta receta"** si el coste de receta es 0 (también en DatosIniciales.gs y generar_datos.py, para que Reparar fórmulas lo mantenga). Pendiente: recetas de los platos nuevos y bebidas; calabaza en Ravioli de calabaza; ensalada de las quiches (ahora van "con ensalada").
+- **GitHub Pages: código hecho** (`docs/index.html` y `doPost` en Code.gs). El repo ya es público (paso a hecho). Falta:
+  - (b) y (c) de Luciana. Con el Client ID: ponerlo en `CLIENT_ID` de Code.gs y de docs/index.html; en appsscript.json `executeAs: USER_DEPLOYING`, `access: ANYONE_ANONYMOUS` y el scope `script.external_request`; publicar.ps1. Al poner CLIENT_ID, `doGet` muestra solo el enlace a GitHub.
+  - Tras ese cambio, el dueño de la implementación tiene que autorizar el nuevo permiso: abrir el editor de Apps Script, ejecutar `emailDelToken_` (o cualquier función) una vez y aceptar.
+
 ## Día a día
 
 - Al abrir sesión, `.claude/inicio-sesion.ps1` hace git pull y compara Google con los archivos locales.

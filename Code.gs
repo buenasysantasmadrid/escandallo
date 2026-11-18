@@ -29,6 +29,12 @@ const HOJA = {
 
 /** Abre la app. */
 function doGet() {
+  if (CLIENT_ID !== 'PENDIENTE') {
+    return HtmlService.createHtmlOutput(
+      '<div style="font-family:Arial,sans-serif;max-width:420px;margin:20vh auto;text-align:center;padding:16px">' +
+      '<h2>El escandallo se ha mudado</h2><p><a href="' + PAGINA_GITHUB + '" target="_top">' + PAGINA_GITHUB + '</a></p></div>'
+    ).setTitle('Escandallo · Buenas y Santas');
+  }
   const email = usuario_();
   if (!permitido_(email)) {
     return HtmlService.createHtmlOutput(
@@ -42,11 +48,50 @@ function doGet() {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
 }
 
+// ID de cliente OAuth (Google Cloud → Credentials) de la página de GitHub Pages. No es secreto.
+const CLIENT_ID = 'PENDIENTE';
+const PAGINA_GITHUB = 'https://buenasysantasmadrid.github.io/escandallo/';
+
+/** Peticiones de la página de GitHub Pages: {token, action, ...}. Comprueba el token de Google. */
+function doPost(e) {
+  let res;
+  try {
+    const p = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    const email = emailDelToken_(p.token);
+    if (!email) res = { ok: false, sesion: true, error: 'La sesión ha caducado. Vuelve a entrar.' };
+    else if (!permitido_(email)) res = { ok: false, sesion: true, error: 'La cuenta ' + email + ' no tiene permiso para ver el escandallo.' };
+    else res = JSON.parse(ejecutar_(p, email));
+  } catch (err) {
+    res = { ok: false, error: String(err.message || err) };
+  }
+  return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/** Valida el ID token de Google (firma, caducidad y destinatario) y devuelve el email, o '' si no vale. */
+function emailDelToken_(token) {
+  if (!token || CLIENT_ID === 'PENDIENTE') return '';
+  const cache = CacheService.getScriptCache();
+  const clave = 'tk_' + Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, token));
+  const enCache = cache.get(clave);
+  if (enCache !== null) return enCache;
+  const r = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(token), { muteHttpExceptions: true });
+  let email = '';
+  if (r.getResponseCode() === 200) {
+    const t = JSON.parse(r.getContentText());
+    const vigente = Number(t.exp) * 1000 > Date.now();
+    if (t.aud === CLIENT_ID && String(t.email_verified) === 'true' && vigente) email = String(t.email || '').toLowerCase();
+  }
+  if (email) cache.put(clave, email, 300);
+  return email;
+}
+
 /** Punto de entrada único para la página (google.script.run.api). Devuelve JSON en texto. */
 function api(p) {
-  p = p || {};
+  return ejecutar_(p || {}, usuario_());
+}
+
+function ejecutar_(p, email) {
   try {
-    const email = usuario_();
     if (!permitido_(email)) throw new Error('Sin acceso para ' + (email || 'esta cuenta'));
     let res;
     switch (p.action) {
