@@ -102,7 +102,14 @@ Las fórmulas están pre-rellenadas hasta abajo (PLATOS 300, RECETAS 2000, INGRE
 
 Precio del ingrediente = media ponderada del mes (Σ importe / Σ cantidad). Si no hay compras en el mes, se usa la media histórica de facturas y, si tampoco hay, el precio de referencia 2021.
 
-## Siguiente paso: facturas del cierre de caja
+## Facturas del cierre de caja (hecho el 18/11/2026: `TraerPrecios.gs`)
+
+- `traerFacturas()` copia a FACTURAS (A:G) las líneas nuevas de APP_Precios y de "Precios proveedores". Hay ~500 líneas, del 19/10 al 17/11.
+  - Producto = "Producto" o, si está vacío, "En la factura". Importe = cantidad × precio.
+  - Para no repetir líneas usa la clave proveedor + factura + fecha + producto + cantidad + importe. No usa solo proveedor + factura + producto porque hay líneas legítimas con eso repetido.
+- Menú **Escandallo → Traer precios del cierre de caja**. `activarPreciosDiarios()` (ejecutar una vez en el editor con lfisbein) crea el disparador diario a las 6 h y acepta el permiso nuevo `script.scriptapp`.
+- Después hay que asignar los productos a ingredientes (pestaña Facturas de la app → EQUIVALENCIAS, factor = unidades del escandallo por unidad facturada). Hasta entonces no cambian los precios de los ingredientes.
+- Lo que sigue es la idea original, como referencia:
 
 El proyecto **CIERRE-CAJA** (Desktop\CIERRE-CAJA, `Precios.gs`) ya extrae con Claude las líneas de cada factura escaneada. Las guarda con estas columnas:
 Fecha · Proveedor · Factura · En la factura · ID producto · Producto · Cantidad · Unidad · Precio (unitario sin IVA) · Precio anterior · Cambio % · Foto · Registrado

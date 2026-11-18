@@ -238,6 +238,7 @@ function mesActual() {
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Escandallo')
     .addItem('Volver al mes en curso', 'mesActual')
+    .addItem('Traer precios del cierre de caja', 'traerFacturasMenu')
     .addItem('Actualizar a la carta 2026', 'actualizarCarta2026')
     .addSeparator()
     .addItem('Instalar (solo la primera vez)', 'instalarEscandallo')
