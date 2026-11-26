@@ -78,7 +78,7 @@ Al 18/11/2026 (este ordenador enlazado; ver "Otro ordenador"):
   - Cliente web "Página GitHub", con origen `https://buenasysantasmadrid.github.io`. El CLIENT_ID está en Code.gs y en docs/index.html.
   - GitHub Pages: main, carpeta /docs (comprobado, las páginas dan 200).
   - appsscript.json: `USER_DEPLOYING`, `ANYONE_ANONYMOUS` y `script.external_request`. Publicado como versión 11; clasp está conectado como lfisbein.
-  - Pendiente: lfisbein tiene que ejecutar `autorizar()` una vez en el editor de Apps Script y aceptar los permisos. Hasta entonces doPost devuelve "No tienes permiso para llamar a UrlFetchApp.fetch". Después, probar a entrar en la página de GitHub con las 3 cuentas.
+  - lfisbein ya aceptó el permiso. **Publicar SIEMPRE con la cuenta lfisbein** (publicar.ps1 usa `clasp --user lfisbein`): el 26/11/2026 se publicó con buenasysantasmadrid (la cuenta "default" de clasp) y la página dio "No tienes permiso para llamar a UrlFetchApp.fetch". Se arregló volviendo a publicar con lfisbein (@18).
 - DatosIniciales.gs: la versión buena es la de Google (tiene "Falta receta"). El 18/11 se copió aquí antes de publicar. Si el aviso de inicio dice "DatosIniciales (distinto)", mirar cuál es más nuevo antes de hacer clasp push.
 
 ## Preguntas pendientes para Luciana (las va contestando poco a poco)
