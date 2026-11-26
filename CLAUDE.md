@@ -184,3 +184,6 @@ Idea: en Code.gs, una función `traerFacturas()` con disparador diario que copie
 - Sin duplicar: usar como clave proveedor + factura + producto.
 
 Después, asignar los productos a ingredientes desde la pestaña Facturas de la app (se rellena EQUIVALENCIAS).
+
+Al 26/11/2026:
+- **Sugerencias al asignar** (Sugerencias.gs): la pestaña "Facturas sin asignar" de la app trae puesto el ingrediente y el factor. Busca en este orden: la propuesta del 18/11 (PROPUESTA_ASIG_, que nunca se había cargado: EQUIVALENCIAS tenía 1 fila), un producto ya asignado con el mismo nombre limpio, o las palabras del ingrediente dentro del nombre (plurales y una letra de diferencia). Botón "Asignar las N seguras" (acción asignarVarios). Si la línea ya viene en la unidad del ingrediente (PRECIOS: kg/l/ud), el factor es 1.
