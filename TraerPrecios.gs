@@ -48,18 +48,23 @@ function traerFacturas() {
     });
 
     const nuevas = [], avisos = [];
+    const yaEnOrigen = { ids: {}, numeros: {} };
     ORIGENES_PRECIOS_.forEach(o => {
       let filas;
       try {
         const h = SpreadsheetApp.openById(o.id).getSheetByName(o.pestana);
         if (!h) { avisos.push('No existe la pestaña ' + o.pestana); return; }
         if (h.getLastRow() < 2) return;
-        filas = h.getRange(2, 1, h.getLastRow() - 1, 9).getValues();
+        filas = h.getRange(2, 1, h.getLastRow() - 1, 12).getValues();
       } catch (e) {
         avisos.push(o.pestana + ': ' + (e.message || e));
         return;
       }
       filas.forEach(f => {
+        // Para no traer dos veces lo mismo desde PRECIOS (abajo).
+        const idFoto = idDrive_(f[11]);
+        if (idFoto) yaEnOrigen.ids[idFoto] = true;
+        if (claveNumero_(f[2]).length >= 3) yaEnOrigen.numeros[claveNumero_(f[2])] = true;
         const proveedor = String(f[1] || '').trim();
         const producto = String(f[5] || f[3] || '').trim();
         const cantidad = numPrecio_(f[6]), precio = numPrecio_(f[8]);
@@ -72,6 +77,27 @@ function traerFacturas() {
         nuevas.push([fecha, proveedor, f[2] === null ? '' : f[2], producto, cantidad, String(f[7] || ''), importe]);
       });
     });
+
+    // Pestaña PRECIOS del Índice (desde el 26/11/2026): todos los proveedores.
+    // Solo lo que NO llega ya por APP_Precios / "Precios proveedores" (esos
+    // productos ya están asignados con su factor) y sin las líneas dudosas.
+    // Va en kg / l / ud (o en piezas si no se sabe el contenido): el factor
+    // de EQUIVALENCIAS suele ser 1.
+    try {
+      const h = SpreadsheetApp.openById(ORIGENES_PRECIOS_[1].id).getSheetByName(PESTANA_PRECIOS_);
+      if (h && h.getLastRow() > 1) {
+        h.getRange(2, 1, h.getLastRow() - 1, 21).getValues().forEach(f => {
+          const l = lineaDePrecios_(f, yaEnOrigen);
+          if (!l) return;
+          const k = clavePrecio_(l[1], l[2], l[0], l[3], l[4], l[6]);
+          if (ya[k]) return;
+          ya[k] = true;
+          nuevas.push(l);
+        });
+      }
+    } catch (e) {
+      avisos.push(PESTANA_PRECIOS_ + ': ' + (e.message || e));
+    }
 
     if (nuevas.length) {
       nuevas.sort((a, b) => a[0] - b[0]);
@@ -89,6 +115,34 @@ function traerFacturas() {
   } finally {
     lock.releaseLock();
   }
+}
+
+const PESTANA_PRECIOS_ = 'PRECIOS';
+
+function idDrive_(url) {
+  const m = /\/d\/([\w-]{20,})/.exec(String(url || '')) || /[?&]id=([\w-]{20,})/.exec(String(url || ''));
+  return m ? m[1] : '';
+}
+function claveNumero_(n) { return String(n === null ? '' : n).toUpperCase().replace(/[^0-9A-Z]/g, ''); }
+
+// Una fila de PRECIOS (Fecha · Proveedor · Documento · Nº · En la factura · Producto · ID pedidos ·
+// Cantidad · Se cobra por · Piezas por bulto · Cada pieza trae · Medida · Precio · Importe línea ·
+// Precio pieza · Precio por kg/l/ud · Precio anterior · Cambio % · Revisar · PDF · Id archivo)
+// → fila de FACTURAS [fecha, proveedor, nº, producto, cantidad, unidad, importe], o null.
+function lineaDePrecios_(f, yaEnOrigen) {
+  if (String(f[18] || '').trim()) return null;                  // dudosa
+  if (yaEnOrigen.ids[String(f[20] || '')] || yaEnOrigen.ids[idDrive_(f[19])]) return null;
+  if (claveNumero_(f[3]).length >= 3 && yaEnOrigen.numeros[claveNumero_(f[3])]) return null;
+  const proveedor = String(f[1] || '').trim(), producto = String(f[5] || f[4] || '').trim();
+  const fecha = f[0] instanceof Date ? f[0] : (fechaISO_(f[0]) ? new Date(fechaISO_(f[0]) + 'T12:00:00') : '');
+  const cant = numPrecio_(f[7]), precio = numPrecio_(f[12]);
+  const piezas = numPrecio_(f[9]), cont = numPrecio_(f[10]), medida = String(f[11] || '').trim();
+  if (!proveedor || !producto || !fecha || !(cant > 0) || !(precio > 0)) return null;
+  const importe = Math.round(cant * precio * 100) / 100;
+  let cantidad = cant, unidad = String(f[8] || '');
+  if (numPrecio_(f[15]) > 0 && piezas > 0 && cont > 0 && medida) { cantidad = cant * piezas * cont; unidad = medida; }
+  else if (numPrecio_(f[14]) > 0 && piezas > 0) { cantidad = cant * piezas; unidad = 'ud'; }
+  return [fecha, proveedor, f[3] === null ? '' : f[3], producto, Math.round(cantidad * 1000) / 1000, unidad, importe];
 }
 
 /** Menú: traer ahora y avisar. */
