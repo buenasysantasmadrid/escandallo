@@ -105,7 +105,8 @@ function ejecutar_(p, email) {
       case 'datos':   res = datos_(); res.usuario = email; break;
       case 'pvp':     res = guardarPvp_(p.plato, p.valor); break;
       case 'coef':    res = guardarCoef_(p.plato, p.valor); break;
-      case 'asignar': res = asignar_(p.producto, p.ingrediente, p.factor, p.proveedor); break;
+      case 'asignar': res = asignarVarios_([{ producto: p.producto, ingrediente: p.ingrediente, factor: p.factor, proveedor: p.proveedor, nuevaUnidad: p.nuevaUnidad }]); if (res.errores.length) throw new Error(res.errores[0]); break;
+      case 'asignarVarios': res = asignarVarios_(p.lista); break;
       case 'mes':     res = cambiarMes_(p.fecha); break;
       case 'receta':  res = guardarReceta_(p.plato, p.lineas, p.rend); break;
       case 'precioManual': res = precioManual_(p.ingrediente, p.valor); break;
@@ -183,7 +184,7 @@ function datos_() {
     pend[k].lineas++; pend[k].importe += Number(v[6]) || 0;
   });
 
-  return { config, platos, recetas, ingredientes, pendientes: Object.values(pend), actualizado: new Date().toISOString() };
+  return { config, platos, recetas, ingredientes, pendientes: sugerirPendientes_(Object.values(pend), ingredientes), actualizado: new Date().toISOString() };
 }
 
 function filaPlato_(nombre) {

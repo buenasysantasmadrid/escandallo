@@ -111,7 +111,7 @@ const st = { datos: null, tab: leer('esc_tab') || 'carta', cat: 'Todas', q: '', 
 // ---- Configuración ----
 // URL /exec del Apps Script (la de .claude/implementacion.txt) y el ID de cliente OAuth de Google Cloud.
 const API_URL = 'https://script.google.com/macros/s/AKfycbz1X3Im_cZMZGlmjvv4IZnVbIu-e3Qgf9wGeW0lnosHaNsQhLiOo4nzZxV-HujMFBVvEQ/exec';
-const VERSION = '18/11 16:10';
+const VERSION = '26/11 sugerencias';
 const CLIENT_ID = '1050764622239-lbl39rs0pjcr1ms46eldrd4e680kvscr.apps.googleusercontent.com';
 
 // ---- Sesión con Google ----
@@ -499,30 +499,53 @@ function nuevoIng() {
   };
 }
 
+const NO_ING = '(no es ingrediente)';
 function vistaPend() {
   const d = st.datos;
-  const opts = d.ingredientes.filter(i => i.tipo === 'Compra').map(i => `<option value="${esc(i.nombre)}">`).join('');
+  const nombres = d.ingredientes.filter(i => i.tipo === 'Compra').map(i => i.nombre);
+  d.pendientes.forEach(p => { if (p.sug && p.sug.nuevaUnidad && nombres.indexOf(p.sug.ingrediente) < 0) nombres.push(p.sug.ingrediente); });
+  const opts = [NO_ING].concat(nombres).map(n => `<option value="${esc(n)}">`).join('');
+  const seguras = d.pendientes.filter(p => p.sug && p.sug.seguro);
+  const fmt = x => String(x).replace('.', ',');
   $('#cont').innerHTML = `
-    <p class="nota">Productos de factura que todavía no están vinculados a un ingrediente. Al asignarlos, su precio entra en el escandallo.</p>
+    <p class="nota">Productos de factura que todavía no están vinculados a un ingrediente. Al asignarlos, su precio entra en el escandallo. Ya viene puesto el ingrediente que parece: revísalo y dale a Asignar.</p>
+    ${seguras.length ? `<button class="btn" id="todasSeg">Asignar las ${seguras.length} seguras (✓)</button><br><br>` : ''}
     <datalist id="dlIng">${opts}</datalist>
     <div class="lista">${d.pendientes.map((p, k) => `
       <div class="pend">
         <b>${esc(p.producto)}</b><br><small style="color:var(--gris)">${esc(p.proveedor || '')} · ${p.lineas} línea${p.lineas > 1 ? 's' : ''} · ${eur(p.importe)} · unidad factura: ${esc(p.unidad || '—')}</small>
+        ${p.sug ? `<br><small style="color:${p.sug.seguro ? '#2e7d32' : '#b26a00'}">${p.sug.seguro ? '✓ Seguro' : '¿Es esto?'}: ${esc(p.sug.porque || '')}${p.sug.nuevaUnidad ? ' · ingrediente nuevo (' + esc(p.sug.nuevaUnidad) + ')' : ''}</small>` : ''}
         <div class="grid">
-          <div class="campo"><label>Ingrediente</label><input list="dlIng" id="pi${k}" placeholder="Escribe para buscar"></div>
-          <div class="campo"><label>Uds. escandallo por ud. factura</label><input id="pf${k}" inputmode="decimal" value="1"></div>
+          <div class="campo"><label>Ingrediente</label><input list="dlIng" id="pi${k}" placeholder="Escribe para buscar" value="${p.sug ? esc(p.sug.ingrediente) : ''}"></div>
+          <div class="campo"><label>Uds. escandallo por ud. factura</label><input id="pf${k}" inputmode="decimal" value="${p.sug ? fmt(p.sug.factor) : '1'}"></div>
         </div><br>
         <button class="btn" data-k="${k}">Asignar</button>
       </div>`).join('') || '<div class="vacio">✓ Todos los productos de las facturas están asignados</div>'}</div>
-    <p class="nota">Ejemplo de factor: si la factura cuenta cajas de 30 paquetes de 12 tapas y el escandallo usa tapas sueltas, pon 360. Si la factura ya viene en kg, l o unidades iguales a las del escandallo, deja 1.</p>`;
+    <p class="nota">Ejemplo de factor: si la factura cuenta cajas de 30 paquetes de 12 tapas y el escandallo usa tapas sueltas, pon 360. Si la factura ya viene en kg, l o unidades iguales a las del escandallo, deja 1. Si el producto no se usa en ninguna receta (servilletas, sobres…), elige "${NO_ING}".</p>`;
+  const valido = (p, ing) => ing === NO_ING || d.ingredientes.some(i => i.nombre === ing) || (p.sug && p.sug.nuevaUnidad && p.sug.ingrediente === ing);
   document.querySelectorAll('.pend .btn').forEach(b => b.onclick = async () => {
     const k = b.dataset.k, p = d.pendientes[k];
     const ing = $('#pi' + k).value.trim(), f = $('#pf' + k).value.trim() || '1';
-    if (!d.ingredientes.some(i => i.nombre === ing)) { toast('Elige un ingrediente de la lista'); return; }
+    if (!valido(p, ing)) { toast('Elige un ingrediente de la lista'); return; }
     b.disabled = true; b.textContent = 'Guardando…';
-    try { await llamar({ action: 'asignar', producto: p.producto, ingrediente: ing, factor: f, proveedor: p.proveedor || '' }); toast('Asignado'); cargar(); }
+    const nuevaUnidad = p.sug && p.sug.nuevaUnidad && p.sug.ingrediente === ing ? p.sug.nuevaUnidad : '';
+    try { await llamar({ action: 'asignar', producto: p.producto, ingrediente: ing, factor: f, proveedor: p.proveedor || '', nuevaUnidad }); toast('Asignado'); cargar(); }
     catch (e) { toast(e.message); b.disabled = false; b.textContent = 'Asignar'; }
   });
+  const bt = $('#todasSeg');
+  if (bt) bt.onclick = () => {
+    abrirHoja(`<h3>Asignar ${seguras.length} productos</h3>
+      <p class="nota">Revisa la lista. Si alguno está mal, cierra y asígnalo a mano antes.</p>
+      <div style="font-size:14px;line-height:1.5">${seguras.map(p => `${esc(p.producto)} → <b>${esc(p.sug.ingrediente)}</b>${Number(p.sug.factor) !== 1 ? ' × ' + fmt(p.sug.factor) : ''}`).join('<br>')}</div><br>
+      <button class="btn" id="okSeg">Sí, asignar todos</button>`);
+    $('#okSeg').onclick = async () => {
+      const b = $('#okSeg'); b.disabled = true; b.textContent = 'Guardando…';
+      try {
+        const r = await llamar({ action: 'asignarVarios', lista: seguras.map(p => ({ producto: p.producto, ingrediente: p.sug.ingrediente, factor: p.sug.factor, proveedor: p.proveedor || '', nuevaUnidad: p.sug.nuevaUnidad || '' })) });
+        cerrarHoja(); toast('Asignados: ' + r.hechas + (r.errores && r.errores.length ? ' · ' + r.errores.length + ' con error' : '')); cargar();
+      } catch (e) { toast(e.message); b.disabled = false; b.textContent = 'Sí, asignar todos'; }
+    };
+  };
 }
 
 function abrirHoja(html) { $('#hoja').innerHTML = '<div class="asa"></div><button class="cerrar" onclick="cerrarHoja()" aria-label="Cerrar">✕</button>' + html; $('#hoja').scrollTop = 0; $('#velo').classList.add('on'); $('#hoja').classList.add('on'); }
