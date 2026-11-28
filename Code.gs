@@ -112,6 +112,7 @@ function ejecutar_(p, email) {
       case 'precioManual': res = precioManual_(p.ingrediente, p.valor); break;
       case 'nuevoIng': res = nuevoIngrediente_(p.nombre, p.unidad, p.valor); break;
       case 'nuevaElab': res = nuevaElaboracion_(p.nombre, p.rend, p.unidad, p.cat); break;
+      case 'quitarDuplicados': res = quitarDuplicadosFacturas_(); break;
       default: throw new Error('Acción desconocida: ' + p.action);
     }
     return JSON.stringify(Object.assign({ ok: true }, res));

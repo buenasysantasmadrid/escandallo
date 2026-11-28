@@ -47,6 +47,8 @@ function traerFacturas() {
       ya[clavePrecio_(r[1], r[2], r[0], r[3], r[4], r[6])] = true;
     });
 
+    // Las que se quitaron por repetidas no se vuelven a traer.
+    clavesQuitadas_().forEach(k => { ya[k] = true; });
     const nuevas = [], avisos = [];
     const yaEnOrigen = { ids: {}, numeros: {} };
     ORIGENES_PRECIOS_.forEach(o => {
@@ -109,7 +111,9 @@ function traerFacturas() {
       sh.getRange(ultima + 2, 1, nuevas.length, 7).setValues(nuevas);
       SpreadsheetApp.flush();
     }
-    const res = { nuevas: nuevas.length, avisos };
+    let duplicadas = 0;
+    try { duplicadas = quitarDuplicadosFacturas_(true).quitadas; } catch (e) { avisos.push('Duplicadas: ' + (e.message || e)); }
+    const res = { nuevas: nuevas.length, duplicadas, avisos };
     Logger.log(JSON.stringify(res));
     return res;
   } finally {
@@ -162,4 +166,75 @@ function activarPreciosDiarios() {
   ScriptApp.newTrigger('traerFacturas').timeBased().everyDays(1).atHour(6).inTimezone('Europe/Madrid').create();
   const r = traerFacturas();
   Logger.log('Disparador diario creado. Líneas nuevas: ' + r.nuevas + (r.avisos.length ? ' · Avisos: ' + r.avisos.join(' / ') : ''));
+}
+
+// Un mismo albarán leído dos veces (28/11/2026): llegaba por dos sitios (o se
+// releía) con otro nombre de producto ("Rúcula" / "Rúcula en bandeja") o con la
+// cantidad en otra unidad ("1 unidad" / "0,5 kg"), y la clave de arriba no lo
+// veía repetido. Para cada documento (proveedor + nº + fecha), las líneas que
+// entraron en una tanda posterior (filas más abajo) y tienen el mismo importe
+// que una línea de la primera tanda se borran (A:G; las fórmulas siguen).
+function quitarDuplicadosFacturas_(yaBloqueado) {
+  const lock = yaBloqueado ? null : LockService.getScriptLock();
+  if (lock) lock.waitLock(30000);
+  try {
+    const sh = hoja_(HOJA.FACTURAS);
+    const max = sh.getMaxRows();
+    const v = sh.getRange(2, 1, max - 1, 7).getValues();
+    const docs = {};
+    v.forEach((r, i) => {
+      if (r[3] === '' || r[3] === null) return;
+      const n = claveNumero_(typeof r[2] === 'number' ? String(Math.round(r[2])) : r[2]);
+      const f = fechaISO_(r[0]);
+      if (n.length < 3 || !f) return;
+      const k = String(r[1]).trim() + '|' + n + '|' + f;
+      (docs[k] = docs[k] || []).push(i);
+    });
+    const quitar = [];
+    Object.keys(docs).forEach(k => {
+      const filas = docs[k];
+      // Primera tanda: las filas seguidas desde la primera (huecos de menos de 40).
+      let fin = 0;
+      while (fin + 1 < filas.length && filas[fin + 1] - filas[fin] < 40) fin++;
+      if (fin === filas.length - 1) return;
+      const libres = filas.slice(0, fin + 1);
+      filas.slice(fin + 1).forEach(i => {
+        const imp = Number(v[i][6]) || 0;
+        const j = libres.findIndex(b => Math.abs((Number(v[b][6]) || 0) - imp) < 0.015);
+        if (j < 0) return;
+        libres.splice(j, 1);
+        quitar.push(i);
+      });
+    });
+    if (quitar.length) {
+      const hq = hojaQuitadas_();
+      hq.getRange(hq.getLastRow() + 1, 1, quitar.length, 2).setValues(quitar.map(i => {
+        const r = v[i];
+        return [clavePrecio_(r[1], r[2], r[0], r[3], r[4], r[6]), [fechaISO_(r[0]), r[1], r[2], r[3], r[4], r[5], r[6]].join(' · ')];
+      }));
+    }
+    quitar.forEach(i => sh.getRange(i + 2, 1, 1, 7).clearContent());
+    if (quitar.length) SpreadsheetApp.flush();
+    return { quitadas: quitar.length };
+  } finally {
+    if (lock) lock.releaseLock();
+  }
+}
+
+// Pestaña oculta con las líneas quitadas por repetidas (para no volver a traerlas).
+const PESTANA_QUITADAS_ = 'FACTURAS REPETIDAS';
+function hojaQuitadas_() {
+  const ss = libro_();
+  let h = ss.getSheetByName(PESTANA_QUITADAS_);
+  if (!h) {
+    h = ss.insertSheet(PESTANA_QUITADAS_);
+    h.getRange(1, 1, 1, 2).setValues([['clave', 'Línea quitada de FACTURAS por estar repetida (mismo albarán leído dos veces)']]);
+    h.hideSheet();
+  }
+  return h;
+}
+function clavesQuitadas_() {
+  const h = libro_().getSheetByName(PESTANA_QUITADAS_);
+  if (!h || h.getLastRow() < 2) return [];
+  return h.getRange(2, 1, h.getLastRow() - 1, 1).getValues().map(r => String(r[0])).filter(String);
 }
