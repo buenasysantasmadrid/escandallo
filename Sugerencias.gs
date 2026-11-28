@@ -178,5 +178,7 @@ function asignarVarios_(lista) {
     hechas++;
   });
   SpreadsheetApp.flush();
+  // Con el factor nuevo puede cambiar qué líneas tienen un precio raro (Revisar.gs).
+  try { marcarRaros_(); } catch (e) { errores.push('Revisar: ' + (e.message || e)); }
   return { guardado: true, hechas, errores };
 }

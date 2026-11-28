@@ -113,7 +113,9 @@ function traerFacturas() {
     }
     let duplicadas = 0;
     try { duplicadas = quitarDuplicadosFacturas_(true).quitadas; } catch (e) { avisos.push('Duplicadas: ' + (e.message || e)); }
-    const res = { nuevas: nuevas.length, duplicadas, avisos };
+    let raros = 0;
+    try { raros = marcarRaros_().raros; } catch (e) { avisos.push('Revisar: ' + (e.message || e)); }
+    const res = { nuevas: nuevas.length, duplicadas, raros, avisos };
     Logger.log(JSON.stringify(res));
     return res;
   } finally {

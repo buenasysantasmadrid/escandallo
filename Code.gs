@@ -113,6 +113,9 @@ function ejecutar_(p, email) {
       case 'nuevoIng': res = nuevoIngrediente_(p.nombre, p.unidad, p.valor); break;
       case 'nuevaElab': res = nuevaElaboracion_(p.nombre, p.rend, p.unidad, p.cat); break;
       case 'quitarDuplicados': res = quitarDuplicadosFacturas_(); break;
+      case 'instalarRevisar': res = instalarRevisar_(); break;
+      case 'revisar': res = marcarRaros_(); break;
+      case 'dudas': res = escribirDudas_(p.filas); break;
       default: throw new Error('Acción desconocida: ' + p.action);
     }
     return JSON.stringify(Object.assign({ ok: true }, res));
