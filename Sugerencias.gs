@@ -158,7 +158,11 @@ function asignarVarios_(lista) {
     }
   });
   const sh = hoja_(HOJA.EQUIV);
-  const col = sh.getRange(2, 1, sh.getMaxRows() - 1, 1).getValues().map(r => String(r[0]));
+  // Producto + proveedor (28/11/2026): el mismo texto puede ser otra cosa en
+  // otro proveedor ("Girasol 5 l": garrafa en Mercadona, caja de 3 en Disbesa).
+  const ab = sh.getRange(2, 1, sh.getMaxRows() - 1, 2).getValues();
+  const col = ab.map(r => String(r[0]));
+  const prv = ab.map(r => String(r[1]).trim().toLowerCase());
   const errores = [];
   let hechas = 0;
   lista.forEach(a => {
@@ -166,15 +170,18 @@ function asignarVarios_(lista) {
     if (!prod || !ing) return;
     if (ing !== NO_ING_ && !existe[ing]) { errores.push(prod + ': no existe el ingrediente ' + ing); return; }
     const f = Number(String(a.factor || 1).replace(',', '.')) || 1;
-    let fila = col.indexOf(prod);
+    const pv = String(a.proveedor || '').trim().toLowerCase();
+    // La fila de ese producto y ese proveedor; si solo está con otro proveedor, fila nueva.
+    let fila = col.findIndex((c, i) => c === prod && prv[i] === pv);
+    if (fila < 0 && !col.some((c, i) => c === prod && prv[i] && prv[i] !== pv)) fila = col.indexOf(prod);
     if (fila < 0) fila = col.indexOf('');
-    if (fila < 0) { sh.insertRowAfter(sh.getMaxRows()); fila = col.length; col.push(''); }
+    if (fila < 0) { sh.insertRowAfter(sh.getMaxRows()); fila = col.length; col.push(''); prv.push(''); }
     // "(no es ingrediente)": la columna C solo admite ingredientes (validación),
     // así que va vacía (el producto deja de estar "SIN ASIGNAR" y no cuenta en
     // ningún precio) y la nota lo dice. Antes fallaba y paraba todo el lote (28/11/2026).
     if (ing === NO_ING_) sh.getRange(fila + 2, 1, 1, 5).setValues([[prod, a.proveedor || '', '', '', NO_ING_]]);
     else sh.getRange(fila + 2, 1, 1, 4).setValues([[prod, a.proveedor || '', ing, f]]);
-    col[fila] = prod;
+    col[fila] = prod; prv[fila] = pv;
     hechas++;
   });
   SpreadsheetApp.flush();

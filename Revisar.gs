@@ -33,14 +33,16 @@ function marcarRaros_() {
   let raros = 0;
   Object.keys(porIng).forEach(ing => {
     const filas = porIng[ing];
-    if (filas.length < 3) return;
+    const limpias0 = filas.filter(i => String(v[i][5]).indexOf('→') < 0);
+    // Con menos de 3 líneas solo se miran las "→" (formato de Pedidos), contra las normales.
+    if (filas.length < 3 && !(limpias0.length >= 1 && limpias0.length < filas.length)) return;
     // Lo normal se mide sin las líneas con el precio pasado al formato de
     // Pedidos ("kg → caja 5kg"), que a menudo salen multiplicadas.
     const limpias = filas.filter(i => String(v[i][5]).indexOf('→') < 0);
-    const base = limpias.length >= 2 ? limpias : filas;
+    const base = limpias.length >= 2 || filas.length < 3 ? limpias : filas;
     const p = base.map(i => Number(v[i][9])).sort((a, b) => a - b);
     const med = p.length % 2 ? p[(p.length - 1) / 2] : (p[p.length / 2 - 1] + p[p.length / 2]) / 2;
-    filas.forEach(i => {
+    (filas.length < 3 ? filas.filter(i => limpias.indexOf(i) < 0) : filas).forEach(i => {
       const eur = Number(v[i][9]);
       if (eur > med * MARGEN_RARO_ || eur < med / MARGEN_RARO_) {
         marca[i] = ['REVISAR', 'Sale a ' + eur.toFixed(2).replace('.', ',') + ' € y lo normal es ' + med.toFixed(2).replace('.', ',') +
@@ -97,4 +99,21 @@ function escribirDudas_(filas) {
     h.getRange(r.getRow(), 6, nuevas.length, 1).setBackground('#e8f5e9');
   }
   return { dudas: nuevas.length };
+}
+
+// Una vez (28/11/2026): FACTURAS H e I buscan primero producto + proveedor en
+// EQUIVALENCIAS y, si no está, solo el producto (fórmulas de DatosIniciales.gs).
+function instalarPorProveedor_() {
+  const h = DATOS_INICIALES_.hojas.filter(x => x.nombre === HOJA.FACTURAS)[0];
+  const sh = hoja_(HOJA.FACTURAS);
+  const ss = sh.getParent();
+  const ultima = sh.getMaxRows();
+  ['8', '9'].forEach(c => {
+    const base = formulaLocal_(h.formulas[c], ss);
+    if (base.indexOf('FILTER') < 0) throw new Error('DatosIniciales sin proveedor en la columna ' + c);
+    const col = [];
+    for (let r = 2; r <= ultima; r++) col.push([base.replace(/\{r\}/g, r)]);
+    sh.getRange(2, Number(c), col.length, 1).setFormulas(col);
+  });
+  return marcarRaros_();
 }

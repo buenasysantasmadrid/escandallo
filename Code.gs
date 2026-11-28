@@ -115,6 +115,7 @@ function ejecutar_(p, email) {
       case 'quitarDuplicados': res = quitarDuplicadosFacturas_(); break;
       case 'instalarRevisar': res = instalarRevisar_(); break;
       case 'revisar': res = marcarRaros_(); break;
+      case 'instalarPorProveedor': res = instalarPorProveedor_(); break;
       case 'dudas': res = escribirDudas_(p.filas); break;
       default: throw new Error('Acción desconocida: ' + p.action);
     }
