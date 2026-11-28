@@ -169,7 +169,11 @@ function asignarVarios_(lista) {
     let fila = col.indexOf(prod);
     if (fila < 0) fila = col.indexOf('');
     if (fila < 0) { sh.insertRowAfter(sh.getMaxRows()); fila = col.length; col.push(''); }
-    sh.getRange(fila + 2, 1, 1, 4).setValues([[prod, a.proveedor || '', ing, f]]);
+    // "(no es ingrediente)": la columna C solo admite ingredientes (validación),
+    // así que va vacía (el producto deja de estar "SIN ASIGNAR" y no cuenta en
+    // ningún precio) y la nota lo dice. Antes fallaba y paraba todo el lote (28/11/2026).
+    if (ing === NO_ING_) sh.getRange(fila + 2, 1, 1, 5).setValues([[prod, a.proveedor || '', '', '', NO_ING_]]);
+    else sh.getRange(fila + 2, 1, 1, 4).setValues([[prod, a.proveedor || '', ing, f]]);
     col[fila] = prod;
     hechas++;
   });
